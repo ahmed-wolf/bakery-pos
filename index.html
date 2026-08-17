@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل الدخول | مخبز العائلة</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --cream: #F6EEDD; --paper: #FFFDF8; --crust: #3D2B1F; --ink: #2B2118; --honey: #C98A3D; --brick: #A8453A; --border: rgba(61,43,31,0.12); }
+  body { font-family: 'Tajawal', sans-serif; background: var(--crust); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login-card { background: var(--cream); border-radius: 24px; width: 380px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); overflow: hidden; }
+  .form-input { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 15px; font-weight: bold; }
+  .form-input:focus { outline: 2px solid var(--honey); }
+</style>
+</head>
+<body>
+<div class="login-card">
+  <div class="px-8 pt-8 pb-6 text-center" style="background: var(--crust); color: var(--cream);">
+    <div class="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center text-xl mb-3" style="background: var(--honey);">🥐</div>
+    <h1 class="font-display font-bold text-xl">مخبز العائلة</h1>
+  </div>
+  <form id="loginForm" class="px-8 py-7">
+    <label class="block text-xs font-bold mb-2" style="color: var(--ink);">اختر اسم المستخدم</label>
+    <select id="loginEmail" class="form-input mb-4 cursor-pointer">
+      <option value="">جاري تحميل القائمة...</option>
+    </select>
+
+    <label class="block text-xs font-bold mb-2" style="color: var(--ink);">كلمة المرور</label>
+    <input id="loginPassword" type="password" required class="form-input mb-2" placeholder="••••">
+
+    <p id="loginErrorMsg" class="text-xs font-bold mb-2 hidden text-center" style="color: var(--brick);"></p>
+    <button type="submit" class="w-full py-3.5 rounded-xl font-bold text-sm mt-4 transition-colors" style="background: var(--honey); color: #2A1400;">دخول</button>
+  </form>
+</div>
+
+<script>
+const supabaseClient = supabase.createClient("https://rjhsjekwixavydzkghqt.supabase.co", "sb_publishable_lHjuLBBq_tr59ziXYvFSag_UMPkGMkj");
+
+// سحب أسماء الموظفين من الداتابيز
+async function loadStaffList() {
+  const { data, error } = await supabaseClient.from("staff").select("email, full_name, role");
+  const select = document.getElementById("loginEmail");
+  
+  if (data && data.length > 0) {
+    select.innerHTML = '<option value="">-- اضغط لاختيار اسمك --</option>' + data.map(s => `<option value="${s.email}">${s.full_name} (${s.role === 'admin' ? 'مدير' : 'كاشير'})</option>`).join("");
+  } else {
+    select.innerHTML = `<option value="">لا يوجد موظفين مسجلين حالياً</option>`;
+  }
+}
+loadStaffList();
+
+// تسجيل الدخول الذكي
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("loginEmail").value;
+  const rawPassword = document.getElementById("loginPassword").value;
+  
+  if(!email) { alert("من فضلك اختر اسم المستخدم من القائمة!"); return; }
+
+  const errorMsg = document.getElementById("loginErrorMsg");
+  errorMsg.classList.add("hidden");
+
+  // التجربة الأولى: نجرب الباسورد بالطريقة الجديدة (بإضافة الكلمة السرية للحسابات الجديدة)
+  let { data, error } = await supabaseClient.auth.signInWithPassword({ 
+    email, 
+    password: rawPassword + "-bakery" 
+  });
+  
+  // التجربة التانية: لو فشل، نجرب الباسورد زي ما كتبته بالظبط (عشان حسابك القديم يفتح)
+  if (error) {
+    const fallback = await supabaseClient.auth.signInWithPassword({ 
+      email, 
+      password: rawPassword 
+    });
+    data = fallback.data;
+    error = fallback.error;
+  }
+  
+  // لو فضل غلط في الحالتين، نطلع رسالة الخطأ
+  if (error) {
+    errorMsg.textContent = "كلمة المرور غير صحيحة!";
+    errorMsg.classList.remove("hidden");
+    return;
+  }
+  
+  // لو تمام، نشوف صلاحيته ونوجهه للصفحة الصح
+  const { data: staff } = await supabaseClient.from("staff").select("role").eq("id", data.user.id).single();
+  if (staff && staff.role === "cashier") {
+    window.location.href = "pos_1.html";
+  } else {
+    window.location.href = "admin_4.html";
+  }
+});
+</script>
+</body>
+</html>

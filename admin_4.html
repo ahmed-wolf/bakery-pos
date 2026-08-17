@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الإدارة | مخبز العائلة</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --cream: #F6EEDD; --cream-2: #EFE4CB; --paper: #FFFDF8; --crust: #3D2B1F; --crust-2: #2A1D15; --crust-3: #4A362A; --ink: #2B2118; --ink-soft: #6B5C4C; --honey: #C98A3D; --sage: #4C7A4C; --teal: #3D6E8C; --brick: #A8453A; --border: rgba(61,43,31,0.10); }
+  body { font-family: 'Tajawal', sans-serif; background: #FAF7F0; color: var(--ink); }
+  .font-display { font-family: 'Cairo', sans-serif; }
+  .tabular { font-variant-numeric: tabular-nums; font-family: 'Cairo', sans-serif; }
+  ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-thumb { background: var(--honey); border-radius: 8px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; color: rgba(246,238,221,0.65); font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.15s; position: relative; }
+  .nav-item.active { background: var(--crust-3); color: var(--cream); }
+  .content-section { display: none; animation: fadeUp 0.25s ease; } .content-section.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .stat-card { background: var(--paper); border: 1px solid var(--border); border-radius: 18px; }
+  .stock-row td { padding: 12px 20px; border-bottom: 1px solid var(--border); }
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .app-modal { background: var(--cream); }
+  .modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(20, 12, 6, 0.6); display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .form-input, .form-select { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; color: var(--ink); }
+  .form-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; display: block; }
+
+  #printArea { display: none; }
+  @media print {
+    @page { margin: 0; size: 80mm auto; }
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { 
+        display: block; position: absolute; top: 0; right: 0; 
+        width: 75mm; padding-right: 12mm; padding-left: 2mm; 
+        box-sizing: border-box; direction: rtl;
+        background: #fff; color: #000; font-family: 'Tajawal', sans-serif; font-size: 12px; 
+    }
+    .r-logo { max-width: 80px; margin: 0 auto 5px auto; display: block; }
+    .r-title { font-size: 16px; font-weight: bold; text-align: center; }
+    .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
+    .r-row { display: flex; justify-content: space-between; }
+    table { width: 100%; text-align: right; }
+  }
+</style>
+</head>
+<body class="h-screen overflow-hidden">
+<div class="h-screen flex flex-row-reverse">
+  <aside class="w-64 shrink-0 flex flex-col" style="background: var(--crust);">
+    <div class="flex items-center gap-3 px-6 py-6 text-cream">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-yellow-600">🥐</div>
+      <div>
+        <h1 class="font-display font-bold text-base text-white">مخبز العائلة</h1>
+        <p class="text-[11px] text-gray-400">مرحباً <span id="adminNameDisplay"></span></p>
+      </div>
+    </div>
+    <nav class="flex-1 px-6 py-2 flex flex-col gap-1.5 overflow-y-auto">
+      <div class="nav-item active" data-tab="overview"><span>📊</span><span>نظرة عامة</span></div>
+      <div class="nav-item" data-tab="inventory"><span>📦</span><span>المخزن والإنتاج</span></div>
+      <div class="nav-item" data-tab="products"><span>🥐</span><span>المنتجات والوصفات</span></div>
+      <div class="nav-item" data-tab="shifts"><span>👥</span><span>الورديات والمبيعات</span></div>
+      <div class="nav-item" data-tab="hr"><span>🏢</span><span>الموارد البشرية</span></div>
+    </nav>
+    <div class="px-6 py-5">
+      <button onclick="window.location.href='pos_1.html'" class="w-full text-center text-xs font-bold py-3 rounded-lg mb-3 bg-green-600 text-white hover:bg-green-700">🛒 الانتقال لشاشة الكاشير</button>
+      <button id="logoutBtn" class="w-full text-center text-xs font-bold py-2 rounded-lg mb-3 text-red-400 bg-red-900 bg-opacity-30">🚪 تسجيل الخروج</button>
+    </div>
+  </aside>
+
+  <main class="flex-1 overflow-y-auto">
+    <div class="max-w-6xl mx-auto px-8 py-8">
+      
+      <section id="tab-overview" class="content-section active">
+        <h2 class="font-display font-extrabold text-2xl mb-6">📊 نظرة عامة</h2>
+        <div class="grid grid-cols-4 gap-5">
+          <div class="stat-card p-5"><p class="text-xs text-gray-500">المبيعات اليومية</p><p class="font-bold text-2xl text-yellow-600">قريباً..</p></div>
+        </div>
+      </section>
+
+      <section id="tab-inventory" class="content-section">
+        <div class="mb-6 flex justify-between">
+          <h2 class="font-display font-extrabold text-2xl">📦 المخزن والإنتاج</h2>
+          <div class="flex gap-3">
+            <button onclick="document.getElementById('modalOverlayBase').classList.add('open')" class="px-5 py-3 rounded-xl bg-yellow-600 font-bold text-sm">🥐 تسجيل إنتاج جديد</button>
+            <button onclick="openReceiptModal()" class="px-5 py-3 rounded-xl border border-gray-300 font-bold text-sm">🧾 تسجيل فاتورة خامات</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-5">
+          <div class="stat-card"><h3 class="p-4 font-bold border-b">🌾 رصيد الخامات</h3><table class="w-full text-sm"><thead><tr class="bg-gray-100"><th class="p-2">الاسم</th><th class="p-2">الرصيد</th></tr></thead><tbody id="ingredientStockBody"></tbody></table></div>
+          <div class="stat-card"><h3 class="p-4 font-bold border-b">🥐 رصيد المنتجات الجاهزة</h3><table class="w-full text-sm"><thead><tr class="bg-gray-100"><th class="p-2">المنتج</th><th class="p-2">الرصيد</th></tr></thead><tbody id="productStockBody"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="tab-products" class="content-section">
+        <div class="mb-6 flex justify-between">
+          <h2 class="font-display font-extrabold text-2xl">🥐 المنتجات والوصفات</h2>
+          <button onclick="openProductModal()" class="px-5 py-3 rounded-xl bg-yellow-600 font-bold text-sm">➕ إضافة منتج جديد</button>
+        </div>
+        <div class="stat-card">
+          <table class="w-full text-sm text-right"><thead><tr class="bg-gray-100"><th class="p-3">اسم المنتج</th><th class="p-3">السعر</th></tr></thead><tbody id="productsTableBody"></tbody></table>
+        </div>
+      </section>
+
+      <section id="tab-shifts" class="content-section">
+        <h2 class="font-display font-extrabold text-2xl mb-6">👥 الورديات والمبيعات</h2>
+        
+        <div class="stat-card mb-8">
+          <h3 class="p-4 font-bold border-b bg-gray-50 rounded-t-18">سجل الورديات</h3>
+          <table class="w-full text-sm text-right"><thead><tr class="bg-gray-100 border-b"><th class="p-3">الكاشير</th><th class="p-3">الفتح</th><th class="p-3">الإغلاق</th><th class="p-3">المتوقع</th><th class="p-3">الفعلي</th></tr></thead><tbody id="shiftsTableBody"></tbody></table>
+        </div>
+
+        <div class="stat-card">
+          <h3 class="p-4 font-bold border-b bg-gray-50 rounded-t-18 flex justify-between items-center">
+            <span>سجل الفواتير (لإعادة الطباعة)</span>
+            <button onclick="loadOrders()" class="text-xs bg-gray-200 px-3 py-1 rounded-md font-bold">تحديث 🔄</button>
+          </h3>
+          <div class="overflow-x-auto max-h-96">
+            <table class="w-full text-sm text-right">
+              <thead><tr class="bg-gray-100 border-b"><th class="p-3">رقم الفاتورة</th><th class="p-3">التاريخ والوقت</th><th class="p-3">اسم العميل</th><th class="p-3">الإجمالي</th><th class="p-3">إجراءات</th></tr></thead>
+              <tbody id="ordersTableBody">
+                  <tr><td colspan="5" class="text-center p-4">جاري تحميل البيانات...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-hr" class="content-section">
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="font-display font-extrabold text-2xl">🏢 الموارد البشرية والرواتب</h2>
+        </div>
+        <div class="stat-card overflow-hidden">
+          <div class="px-5 py-4 flex justify-between items-center border-b">
+            <h3 class="font-display font-bold text-base">📋 الموظفين المسجلين</h3>
+            <div class="flex gap-2">
+              <button onclick="document.getElementById('addStaffModal').classList.add('open')" class="text-xs font-bold px-4 py-2 rounded-lg bg-green-600 text-white">➕ إضافة موظف</button>
+              <button onclick="loadPayrollSummary()" class="text-xs font-bold px-4 py-2 rounded-lg bg-gray-200">🔄 تحديث</button>
+            </div>
+          </div>
+          <table class="w-full text-sm text-right">
+            <thead><tr class="bg-gray-100"><th class="p-3">الاسم</th><th class="p-3">الدور</th><th class="p-3">الراتب</th></tr></thead>
+            <tbody id="payrollTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div id="addStaffModal" class="modal-overlay">
+  <div class="app-modal w-[400px] rounded-2xl overflow-hidden shadow-2xl">
+    <div class="px-6 py-4 bg-gray-900 text-white flex justify-between"><h3 class="font-bold">➕ إضافة موظف جديد</h3><button onclick="document.getElementById('addStaffModal').classList.remove('open')">✕</button></div>
+    <div class="px-6 py-5">
+      <label class="form-label">الاسم بالكامل (اللي هيظهر في شاشة الدخول)</label>
+      <input id="staffName" type="text" class="form-input mb-3" placeholder="مثال: محمود علي">
+      <label class="form-label">كلمة المرور (اكتب أي رقم براحتك)</label>
+      <input id="staffPass" type="password" class="form-input mb-3" placeholder="••••">
+      <div class="flex gap-2 mb-4">
+        <div class="flex-1"><label class="form-label">الصلاحية</label><select id="staffRole" class="form-select"><option value="cashier">كاشير (نقطة بيع فقط)</option><option value="admin">مدير نظام</option></select></div>
+        <div class="flex-1"><label class="form-label">الراتب الأساسي</label><input id="staffSalary" type="number" class="form-input" value="0"></div>
+      </div>
+      <button id="saveNewStaffBtn" class="w-full py-3 bg-green-600 text-white font-bold rounded-xl">حفظ وإنشاء الحساب</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalOverlayBase" class="modal-overlay">
+  <div class="app-modal p-6 rounded-xl w-[400px]">
+    <h3 class="font-bold mb-4">تسجيل إنتاج</h3>
+    <select id="prodProductSelect" class="form-select mb-2"></select>
+    <input id="prodQtyInput" type="number" class="form-input mb-4" placeholder="الكمية المنتجة (مثال: 50)">
+    <button id="prodConfirmBtn" class="bg-green-600 text-white p-2 rounded w-full font-bold">تأكيد</button>
+    <button onclick="document.getElementById('modalOverlayBase').classList.remove('open')" class="w-full mt-2">إلغاء</button>
+  </div>
+</div>
+
+<div id="receiptModalOverlay" class="modal-overlay">
+  <div class="app-modal p-6 rounded-xl w-[400px]">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-bold">فاتورة خامات</h3>
+      <button id="addNewIngBtn" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded font-bold transition">➕ إضافة خامة جديدة للكتالوج</button>
+    </div>
+    <select id="receiptIngredientSelect" class="form-select mb-2"></select>
+    <input id="receiptQtyInput" type="number" class="form-input mb-2" placeholder="الكمية (أرقام فقط)">
+    <input id="receiptUnitCostInput" type="number" class="form-input mb-4" placeholder="السعر (اختياري)">
+    <label class="block text-xs font-bold mb-1">صورة الفاتورة (اختياري)</label>
+    <input type="file" id="receiptImageUpload" class="form-input mb-4" accept="image/*" capture="environment">
+    <button id="receiptConfirmBtn" class="bg-green-600 text-white p-2 rounded w-full font-bold">تأكيد</button>
+    <button onclick="document.getElementById('receiptModalOverlay').classList.remove('open')" class="w-full mt-2">إلغاء</button>
+  </div>
+</div>
+
+<div id="productModalOverlay" class="modal-overlay">
+  <div class="app-modal p-6 rounded-xl w-[400px]">
+    <h3 class="font-bold mb-4">إضافة منتج</h3>
+    <input id="newProdName" type="text" class="form-input mb-2" placeholder="اسم المنتج">
+    <input id="newProdBarcode" type="text" class="form-input mb-2" placeholder="الباركود (اختياري)">
+    <input id="newProdPrice" type="number" class="form-input mb-2" placeholder="السعر">
+    <select id="newProdCategory" class="form-select mb-4">
+      <option value="bakery">مخبوزات</option>
+      <option value="sweets">حلويات</option>
+    </select>
+    <div class="border p-2 rounded mb-4">
+      <p class="text-xs font-bold mb-2">الوصفة (الخامات)</p>
+      <select id="recipeIngredientSelect" class="form-select mb-1"></select>
+      <input id="recipeQtyInput" type="number" class="form-input mb-1" placeholder="الجرامات">
+      <button id="addRecipeIngredientBtn" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">أضف للوصفة</button>
+      <div id="recipeList" class="mt-2 text-xs"></div>
+    </div>
+    <button id="productSaveBtn" class="bg-green-600 text-white p-2 rounded w-full font-bold">حفظ المنتج</button>
+    <button onclick="document.getElementById('productModalOverlay').classList.remove('open')" class="w-full mt-2">إلغاء</button>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const SUPABASE_URL = "https://rjhsjekwixavydzkghqt.supabase.co";
+const SUPABASE_KEY = "sb_publishable_lHjuLBBq_tr59ziXYvFSag_UMPkGMkj";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const authCreatorClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+
+let CURRENT_USER = null; 
+let CURRENT_BRANCH_ID = null;
+
+// دالة تنظيف النصوص (الحماية من XSS)
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function initApp() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = "index.html"; return; }
+  CURRENT_USER = session.user;
+  const { data } = await supabaseClient.from("staff").select("*").eq("id", CURRENT_USER.id).single();
+  if (data.role === "cashier") { window.location.href = "pos_1.html"; return; }
+  CURRENT_BRANCH_ID = data.branch_id;
+  document.getElementById("adminNameDisplay").textContent = escapeHtml(data.full_name);
+  
+  loadIngredientsCatalog(); loadIngredientStock(); loadProductStock(); loadProductsTable(); loadShifts(); loadPayrollSummary();
+  loadOrders();
+}
+
+document.getElementById("saveNewStaffBtn").addEventListener("click", async () => {
+  const name = document.getElementById("staffName").value;
+  const rawPass = document.getElementById("staffPass").value;
+  const role = document.getElementById("staffRole").value;
+  const salary = document.getElementById("staffSalary").value;
+
+  if(!name || !rawPass) return alert("الاسم والباسورد مطلوبين!");
+  
+  const btn = document.getElementById("saveNewStaffBtn");
+  btn.textContent = "جاري الإنشاء..."; btn.disabled = true;
+
+  const fakeEmail = `user_${Date.now()}@bakery.local`;
+  const pass = rawPass + "-bakery";
+
+  const { data: authData, error: authErr } = await authCreatorClient.auth.signUp({ email: fakeEmail, password: pass });
+  if(authErr) { alert("حدث خطأ: " + authErr.message); btn.textContent = "حفظ وإنشاء الحساب"; btn.disabled = false; return; }
+  
+  await supabaseClient.from("staff").insert({
+    id: authData.user.id, email: fakeEmail, full_name: name, role: role, basic_salary: salary, branch_id: CURRENT_BRANCH_ID
+  });
+
+  alert("تم إضافة الموظف بنجاح!");
+  document.getElementById("addStaffModal").classList.remove("open");
+  document.getElementById("staffName").value = "";
+  document.getElementById("staffPass").value = "";
+  btn.textContent = "حفظ وإنشاء الحساب"; btn.disabled = false;
+  
+  loadPayrollSummary();
+});
+
+document.getElementById("addNewIngBtn").addEventListener("click", async () => {
+  const name = prompt("اسم الخامة الجديدة (مثال: زيت، سكر، خميرة):");
+  if(!name) return;
+  let unit = prompt("وحدة القياس (اكتب: gram أو liter أو ml أو kg):", "gram");
+  if(!unit) return;
+
+  if(unit.trim() === "جرام") unit = "gram";
+  if(unit.trim() === "لتر") unit = "liter";
+  if(unit.trim() === "ملي") unit = "ml";
+  if(unit.trim() === "كيلو") unit = "kg";
+
+  const { error } = await supabaseClient.from("ingredients").insert({ name: name, unit: unit });
+  if (error) { alert("حدث خطأ أثناء الإضافة: " + error.message); } 
+  else { alert("تم إضافة الخامة بنجاح!"); await loadIngredientsCatalog(); }
+});
+
+document.getElementById("receiptConfirmBtn").addEventListener("click", async () => {
+  const ingId = document.getElementById("receiptIngredientSelect").value;
+  const qtyText = document.getElementById("receiptQtyInput").value;
+  const qty = Number(qtyText); 
+  
+  if(!ingId || !qtyText || isNaN(qty)) return alert("من فضلك اكتب الكمية بشكل صحيح (أرقام فقط)!");
+  
+  const btn = document.getElementById("receiptConfirmBtn");
+  btn.textContent = "جاري الحفظ..."; btn.disabled = true;
+
+  try {
+    await supabaseClient.from("ingredient_receipts").insert({
+      ingredient_id: ingId, quantity: qty, branch_id: CURRENT_BRANCH_ID
+    });
+
+    await supabaseClient.rpc('add_to_ingredient_stock', {
+      p_branch_id: CURRENT_BRANCH_ID,
+      p_ingredient_id: ingId,
+      p_qty: qty
+    });
+
+    alert("تم تسجيل الفاتورة بنجاح ونزلت في المخزن!");
+    document.getElementById("receiptModalOverlay").classList.remove("open");
+    document.getElementById("receiptQtyInput").value = "";
+    loadIngredientStock();
+  } catch (error) {
+    alert("حدث خطأ أثناء الحفظ.");
+  } finally {
+    btn.textContent = "تأكيد"; btn.disabled = false;
+  }
+});
+
+document.getElementById("prodConfirmBtn").addEventListener("click", async () => {
+  const prodId = document.getElementById("prodProductSelect").value;
+  const qtyText = document.getElementById("prodQtyInput").value;
+  const qty = Number(qtyText);
+
+  if(!prodId || !qtyText || isNaN(qty)) return alert("اكتب الكمية المنتجة بأرقام صحيحة!");
+
+  const btn = document.getElementById("prodConfirmBtn");
+  btn.textContent = "جاري الحفظ..."; btn.disabled = true;
+
+  try {
+    await supabaseClient.from("production_batches").insert({ 
+      product_id: prodId, quantity_produced: qty, branch_id: CURRENT_BRANCH_ID, staff_id: CURRENT_USER.id 
+    });
+
+    await supabaseClient.rpc('add_to_product_stock', {
+      p_branch_id: CURRENT_BRANCH_ID,
+      p_product_id: prodId,
+      p_qty: qty
+    });
+
+    alert("تم تسجيل الإنتاج ونزل في الرصيد!");
+    document.getElementById("modalOverlayBase").classList.remove("open");
+    document.getElementById("prodQtyInput").value = "";
+    loadProductStock();
+  } catch (error) {
+    alert("حدث خطأ أثناء الإنتاج.");
+  } finally {
+    btn.textContent = "تأكيد"; btn.disabled = false;
+  }
+});
+
+document.getElementById("productSaveBtn").addEventListener("click", async () => {
+  const name = document.getElementById("newProdName").value;
+  const barcode = document.getElementById("newProdBarcode").value;
+  const priceText = document.getElementById("newProdPrice").value;
+  const price = Number(priceText);
+
+  if(!name || !priceText || isNaN(price)) return alert("اكتب اسم المنتج والسعر بشكل صحيح!");
+
+  const btn = document.getElementById("productSaveBtn");
+  btn.textContent = "جاري الحفظ..."; btn.disabled = true;
+
+  await supabaseClient.from("products").insert({ name: name, barcode: barcode, base_price: price });
+  
+  alert("تم إضافة المنتج للكاشير بنجاح!");
+  document.getElementById("productModalOverlay").classList.remove("open");
+  document.getElementById("newProdName").value = "";
+  document.getElementById("newProdBarcode").value = ""; 
+  document.getElementById("newProdPrice").value = "";
+  btn.textContent = "حفظ المنتج"; btn.disabled = false;
+  
+  loadProductsTable();
+});
+
+async function loadIngredientsCatalog() { 
+  const { data } = await supabaseClient.from("ingredients").select("*"); 
+  document.getElementById("receiptIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
+  document.getElementById("recipeIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
+}
+
+async function loadIngredientStock() { 
+  const { data } = await supabaseClient.from("branch_ingredient_stock").select("quantity_on_hand, ingredients(name, unit)").eq("branch_id", CURRENT_BRANCH_ID); 
+  document.getElementById("ingredientStockBody").innerHTML = data.map(d=>`<tr><td class="p-2">${escapeHtml(d.ingredients.name)}</td><td class="p-2">${d.quantity_on_hand} ${d.ingredients.unit}</td></tr>`).join(""); 
+}
+
+async function loadProductStock() { 
+  const { data } = await supabaseClient.from("branch_product_stock").select("product_id, quantity_on_hand, products(name)").eq("branch_id", CURRENT_BRANCH_ID); 
+  document.getElementById("productStockBody").innerHTML = data.map(d=>`<tr><td class="p-2">${escapeHtml(d.products.name)}</td><td class="p-2">${d.quantity_on_hand} قطعة</td></tr>`).join(""); 
+  
+  const { data: productsData } = await supabaseClient.from("products").select("id, name");
+  document.getElementById("prodProductSelect").innerHTML = productsData.map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join(""); 
+}
+
+async function loadProductsTable() { 
+  const { data } = await supabaseClient.from("products").select("*"); 
+  document.getElementById("productsTableBody").innerHTML = data.map(p=>`<tr><td class="p-3">${escapeHtml(p.name)}</td><td class="p-3">${p.base_price} ج</td></tr>`).join(""); 
+}
+
+async function loadShifts() { 
+  const { data } = await supabaseClient.from("cashier_shifts").select("*, staff(full_name)"); 
+  document.getElementById("shiftsTableBody").innerHTML = data.map(s=>`<tr><td class="p-3">${escapeHtml(s.staff.full_name)}</td><td class="p-3" dir="ltr">${new Date(s.opened_at).toLocaleTimeString('ar-EG')}</td><td class="p-3">${s.closed_at ? 'مغلق' : 'مفتوح'}</td><td class="p-3 font-bold">${s.expected_cash} ج</td><td class="p-3 font-bold text-green-600">${s.actual_cash || '-'}</td></tr>`).join(""); 
+}
+
+async function loadPayrollSummary() { 
+  const { data } = await supabaseClient.from("staff").select("*"); 
+  document.getElementById("payrollTableBody").innerHTML = data.map(s=>`<tr><td class="p-3 font-bold">${escapeHtml(s.full_name)}</td><td class="p-3">${s.role === 'admin' ? 'مدير' : 'كاشير'}</td><td class="p-3 text-green-600 font-bold">${s.basic_salary || 0} ج</td></tr>`).join(""); 
+}
+
+async function loadOrders() {
+    const { data: orders, error } = await supabaseClient.from('orders').select('*').order('created_at', { ascending: false }).limit(50);
+    const tbody = document.getElementById("ordersTableBody");
+    if(error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500">حدث خطأ في التحميل</td></tr>`; return; }
+    if(orders.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4">لا توجد فواتير مسجلة حتى الآن</td></tr>`; return; }
+
+    tbody.innerHTML = orders.map(order => `
+        <tr class="border-b hover:bg-gray-50 transition">
+            <td class="p-3 font-bold">${escapeHtml(order.receipt_number)}</td>
+            <td class="p-3 text-sm text-gray-600" dir="ltr">${new Date(order.created_at).toLocaleString('ar-EG')}</td>
+            <td class="p-3"><span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-sm font-bold">${escapeHtml(order.customer_name || 'عميل نقدي')}</span></td>
+            <td class="p-3 font-bold text-green-600">${Number(order.total_amount).toFixed(2)} ج</td>
+            <td class="p-3">
+                <button class="reprint-btn bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition text-xs font-bold" 
+                    data-id="${escapeHtml(order.id)}" data-receipt="${escapeHtml(order.receipt_number)}" data-customer="${escapeHtml(order.customer_name || 'عميل نقدي')}" data-total="${order.total_amount}">
+                    طباعة 🖨️
+                </button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+async function reprintOrder(orderId, receiptNum, customerName, totalAmount) {
+    const { data: items } = await supabaseClient.from('order_items').select('quantity, unit_price, products(name)').eq('order_id', orderId);
+    const nameEn = escapeHtml(localStorage.getItem('bakeryNameEn') || 'مخبز العائلة');
+    const logoUrl = escapeHtml(localStorage.getItem('bakeryLogoUrl') || '');
+    const welcomeMsg = escapeHtml(localStorage.getItem('welcomeMessage') || 'شكراً لزيارتكم');
+
+    let html = ``;
+    if (logoUrl) html += `<img src="${logoUrl}" id="receiptLogo" class="r-logo">`;
+    html += `<div class="r-title">${nameEn}</div><div class="text-center text-xs mb-2">(نسخة مطبوعة)</div><div class="r-divider"></div><div class="r-row"><span>رقم:</span><span>${receiptNum}</span></div>`;
+    if(customerName && customerName !== 'null' && customerName !== 'عميل نقدي') html += `<div class="r-row"><span>العميل:</span><span>${customerName}</span></div>`;
+    html += `<div class="r-divider"></div><table><tr><th>الصنف</th><th>سعر</th><th>ك</th><th>ج</th></tr>`;
+    
+    items.forEach(i => {
+        html += `<tr><td>${escapeHtml(i.products.name)}</td><td>${Number(i.unit_price).toFixed(2)}</td><td>${i.quantity}</td><td>${(i.unit_price * i.quantity).toFixed(2)}</td></tr>`;
+    });
+    
+    html += `</table><div class="r-divider"></div><div class="r-row font-bold"><span>الإجمالي:</span><span>${Number(totalAmount).toFixed(2)}</span></div><div class="r-divider"></div><div class="text-center font-bold" style="margin-top:5px;">${welcomeMsg}</div>`;
+    
+    document.getElementById("printArea").innerHTML = html;
+
+    if (logoUrl) {
+        let imgElement = document.getElementById("receiptLogo");
+        imgElement.onload = function() { window.print(); };
+        imgElement.onerror = function() { window.print(); }; 
+    } else {
+        window.print();
+    }
+}
+
+document.querySelectorAll(".nav-item").forEach(item => { 
+  item.addEventListener("click", () => { 
+    document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active")); 
+    item.classList.add("active"); 
+    document.querySelectorAll(".content-section").forEach(sec => sec.classList.remove("active")); 
+    document.getElementById(`tab-${item.dataset.tab}`).classList.add("active"); 
+  }); 
+});
+
+function openReceiptModal() { document.getElementById("receiptModalOverlay").classList.add("open"); }
+function openProductModal() { document.getElementById("productModalOverlay").classList.add("open"); }
+
+document.getElementById("logoutBtn").addEventListener("click", async () => { 
+  await supabaseClient.auth.signOut(); 
+  window.location.href = "index.html"; 
+});
+
+document.getElementById("ordersTableBody").addEventListener("click", (e) => {
+    const btn = e.target.closest(".reprint-btn");
+    if (btn) {
+        reprintOrder(btn.dataset.id, btn.dataset.receipt, btn.dataset.customer, btn.dataset.total);
+    }
+});
+
+initApp();
+</script>
+</body>
+</html>

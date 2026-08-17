@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>نقطة البيع | المخبز</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --cream: #F6EEDD; --paper: #FFFDF8; --crust: #3D2B1F; --crust-2: #2A1D15; --ink: #2B2118; --honey: #C98A3D; --sage: #4C7A4C; --brick: #A8453A; --border: rgba(61,43,31,0.15); }
+  body { font-family: 'Tajawal', sans-serif; background: var(--cream); color: var(--ink); overscroll-behavior: none; }
+  .font-display { font-family: 'Cairo', sans-serif; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: var(--honey); border-radius: 8px; }
+  .product-card { background: var(--paper); border: 1px solid var(--border); transition: transform 0.1s; cursor: pointer; }
+  .product-card:active { transform: scale(0.95); }
+  .form-input { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: bold; }
+  
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.open { display: flex; }
+  .modal-content { background: var(--cream); border-radius: 16px; padding: 20px; width: 400px; max-width: 90%; }
+  
+  #printArea { display: none; }
+  @media print {
+    @page { margin: 0; size: 80mm auto; }
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { 
+        display: block; position: absolute; top: 0; right: 0; 
+        width: 75mm; padding-right: 12mm; padding-left: 2mm; 
+        box-sizing: border-box; direction: rtl;
+        background: #fff; color: #000; font-family: 'Tajawal', sans-serif; font-size: 12px; 
+    }
+    .r-logo { max-width: 80px; margin: 0 auto 5px auto; display: block; }
+    .r-title { font-size: 16px; font-weight: bold; text-align: center; }
+    .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
+    .r-row { display: flex; justify-content: space-between; }
+    table { width: 100%; text-align: right; }
+  }
+</style>
+</head>
+<body class="h-screen flex flex-col">
+
+<header class="flex items-center justify-between px-6 py-3 shrink-0" style="background: var(--crust); color: var(--cream);">
+  <div class="flex items-center gap-3">
+    <div class="w-9 h-9 rounded-full flex items-center justify-center text-lg" style="background: var(--honey);">🥐</div>
+    <h1 class="font-display font-bold text-lg">نقطة البيع</h1>
+  </div>
+  <div class="flex gap-3">
+    <button onclick="openDrawer()" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition mx-2">
+      💵 فتح الدرج
+    </button>
+    <button onclick="openReceiptSettings()" class="bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold text-sm hover:bg-yellow-600 transition mx-2">
+        ⚙️ إعدادات الفاتورة
+    </button>
+    <button id="endShiftBtn" class="px-4 py-2 rounded-xl font-bold text-sm bg-red-600 text-white hover:bg-red-700">🔒 إنهاء الوردية وتقفيل الدرج</button>
+    <button id="returnAdminBtn" class="hidden bg-gray-800 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-900 transition mx-2">
+      ⚙️ لوحة الإدارة
+    </button>
+  </div>
+</header>
+
+<div class="flex-1 flex overflow-hidden">
+  <main class="flex-1 flex flex-col p-4 border-l border-gray-300">
+    <input type="text" id="productSearch" placeholder="🔍 ابحث عن منتج أو باركود..." class="form-input mb-4 p-3 text-lg">
+    <div id="categoryTabs" class="flex gap-2 overflow-x-auto mb-4 pb-2"></div>
+    <div id="productGrid" class="flex-1 overflow-y-auto grid grid-cols-3 gap-3 content-start"></div>
+  </main>
+
+  <aside class="w-1/3 flex flex-col" style="background: var(--crust-2); color: var(--cream);">
+    <div class="p-4 flex-1 overflow-y-auto" id="cartList"></div>
+    
+    <div class="p-4" style="background: rgba(255,255,255,0.05);">
+      <input type="text" id="customerName" placeholder="👤 اسم العميل (اختياري)" class="form-input mb-2 bg-transparent text-white border-gray-600">
+      <input type="text" id="orderNotes" placeholder="📝 ملاحظات (مثال: خصم ضيافة)" class="form-input mb-2 bg-transparent text-white border-gray-600">
+      
+      <div class="flex gap-2 mb-2">
+        <div class="flex-1">
+          <label class="text-xs text-gray-400">خصم %</label>
+          <input type="number" id="discountPercent" value="0" min="0" max="100" class="form-input bg-transparent text-white border-gray-600">
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-gray-400">خصم (ج)</label>
+          <input type="number" id="discountAmount" value="0" min="0" class="form-input bg-transparent text-white border-gray-600">
+        </div>
+      </div>
+      
+      <div class="flex justify-between items-center text-sm text-gray-400 mb-1">
+        <span>الإجمالي الفرعي:</span> <span id="subtotalVal">0.00 ج</span>
+      </div>
+      <div class="flex justify-between items-center font-bold text-xl text-yellow-400 mb-4">
+        <span>المطلوب:</span> <span id="totalVal">0.00 ج</span>
+      </div>
+      
+      <button id="checkoutBtn" class="w-full py-3 rounded-xl font-bold bg-green-600 text-white hover:bg-green-700 mb-2 transition-colors">تأكيد وطباعة 🖨️</button>
+      <button id="cancelBtn" class="w-full py-2 rounded-xl font-bold border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition-colors">إلغاء الطلب</button>
+    </div>
+  </aside>
+</div>
+
+<div id="startShiftModal" class="modal-overlay">
+  <div class="modal-content text-black">
+    <div class="text-3xl text-center mb-2">🔓</div>
+    <h3 class="font-bold text-xl mb-2 text-center">بداية الوردية</h3>
+    <p class="text-sm text-gray-600 mb-4 text-center">أدخل العهدة الافتتاحية (النقدية الموجودة في الدرج حالياً) لفتح الوردية.</p>
+    <input type="number" id="startShiftCashInput" class="form-input text-2xl text-center py-4 mt-2 mb-4 font-bold" placeholder="0.00" min="0" step="0.5">
+    <button id="confirmStartShiftBtn" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors">✓ ابدأ الوردية</button>
+  </div>
+</div>
+
+<div id="endShiftModal" class="modal-overlay">
+  <div class="modal-content text-black">
+    <h3 class="font-bold text-xl mb-4 text-center">تقفيل الوردية</h3>
+    <p class="text-sm text-gray-600 mb-4 text-center">النظام هيحسب مبيعاتك ويطبعلك تقرير الوردية (Z-Report).</p>
+    <label class="font-bold text-sm">النقدية الفعلية في الدرج (الجرد)</label>
+    <input type="number" id="actualCashInput" class="form-input text-xl text-center py-3 mt-2 mb-4" placeholder="0.00">
+    <button id="confirmEndShiftBtn" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors">تأكيد الإغلاق وطباعة التقرير</button>
+    <button onclick="document.getElementById('endShiftModal').classList.remove('open')" class="w-full py-2 mt-2 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition-colors">إلغاء</button>
+  </div>
+</div>
+
+<div id="receiptSettingsModal" class="modal-overlay">
+  <div class="modal-content text-black" style="text-align: right;">
+    <h3 class="font-bold text-xl mb-4" style="margin-top:0;">إعدادات الفاتورة واللوجو</h3>
+    <label class="font-bold text-sm">اسم المخبز:</label><br>
+    <input type="text" id="bakeryNameEn" placeholder="مثال: Family Bakery" class="form-input mb-3"><br>
+    <label class="font-bold text-sm">رابط صورة اللوجو (URL):</label><br>
+    <input type="text" id="bakeryLogoUrl" placeholder="رابط صورة اللوجو (اختياري)" class="form-input mb-3"><br>
+    <label class="font-bold text-sm">رسالة الترحيب أسفل الفاتورة:</label><br>
+    <input type="text" id="welcomeMessage" placeholder="شكراً لزيارتكم" class="form-input mb-4"><br>
+    <div class="flex gap-2">
+        <button onclick="saveReceiptSettings()" class="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold">حفظ</button>
+        <button onclick="closeReceiptSettings()" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const SUPABASE_URL = "https://rjhsjekwixavydzkghqt.supabase.co";
+const SUPABASE_KEY = "sb_publishable_lHjuLBBq_tr59ziXYvFSag_UMPkGMkj";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let CURRENT_USER = null; let CURRENT_BRANCH = null; let CURRENT_SHIFT = null;
+let products = []; let cart = {};
+let subtotal = 0; let total = 0;
+
+// دالة تنظيف النصوص (الحماية من XSS)
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function openDrawer() {
+  document.getElementById("printArea").innerHTML = `<div style="text-align:center; font-size:10px;">-</div>`;
+  window.print();
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if(!session) { window.location.href = "index.html"; return; }
+  CURRENT_USER = session.user;
+  
+  const { data: staff } = await supabaseClient.from("staff").select("branch_id, full_name, role").eq("id", CURRENT_USER.id).single();
+  CURRENT_BRANCH = staff.branch_id;
+
+  if (staff.role === 'admin') {
+    document.getElementById('returnAdminBtn').classList.remove('hidden');
+  }
+
+  const { data: shift } = await supabaseClient.from("cashier_shifts").select("*").eq("staff_id", CURRENT_USER.id).eq("status", "open").maybeSingle();
+  if(!shift) { 
+    document.getElementById("startShiftModal").classList.add("open");
+    return; 
+  }
+  
+  CURRENT_SHIFT = shift;
+  await loadProducts();
+}
+
+document.getElementById("confirmStartShiftBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("confirmStartShiftBtn");
+  const openingCash = document.getElementById("startShiftCashInput").value;
+  
+  if(openingCash === "" || isNaN(openingCash) || Number(openingCash) < 0) { 
+    alert("برجاء إدخال العهدة الافتتاحية بشكل صحيح!"); 
+    return; 
+  }
+
+  btn.disabled = true;
+  btn.textContent = "جاري فتح الوردية...";
+
+  const { data, error } = await supabaseClient.from("cashier_shifts").insert({
+    branch_id: CURRENT_BRANCH, staff_id: CURRENT_USER.id, opening_cash: parseFloat(openingCash), status: "open"
+  }).select().single();
+
+  if(error) { 
+    alert("حدث خطأ في فتح الوردية!"); 
+    btn.disabled = false; btn.textContent = "✓ ابدأ الوردية"; return; 
+  }
+
+  CURRENT_SHIFT = data;
+  document.getElementById("startShiftModal").classList.remove("open");
+  await loadProducts();
+});
+
+async function loadProducts() {
+  const { data } = await supabaseClient.from("products").select("*").eq("is_active", true);
+  products = data || [];
+  renderProducts();
+}
+
+function renderProducts() {
+  const grid = document.getElementById("productGrid");
+  const search = document.getElementById("productSearch").value.toLowerCase();
+  const filtered = products.filter(p => p.name.toLowerCase().includes(search) || (p.barcode && p.barcode.includes(search)));
+  
+  grid.innerHTML = filtered.map(p => `
+    <div onclick="addToCart('${p.id}')" class="product-card p-4 rounded-xl text-center flex flex-col justify-between">
+      <div class="font-bold text-sm mb-2">${escapeHtml(p.name)}</div>
+      <div class="text-orange-600 font-bold text-xs">${Number(p.base_price).toFixed(2)} ج</div>
+    </div>
+  `).join("");
+}
+document.getElementById("productSearch").addEventListener("input", renderProducts);
+
+document.getElementById("productSearch").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    const scanVal = e.target.value.trim();
+    if (!scanVal) return;
+
+    if (scanVal.length === 13 && scanVal.startsWith("23")) {
+      const itemCode = scanVal.substring(2, 7); 
+      const weightInGrams = scanVal.substring(7, 12); 
+      const weightInKg = Number(weightInGrams) / 1000; 
+
+      const p = products.find(x => x.barcode === itemCode);
+      if (p) {
+        if(cart[p.id]) cart[p.id].qty += weightInKg; 
+        else cart[p.id] = { ...p, qty: weightInKg };
+        
+        updateCart(); e.target.value = ""; renderProducts(); return;
+      }
+    }
+
+    const normalProduct = products.find(x => x.barcode === scanVal);
+    if (normalProduct) {
+      addToCart(normalProduct.id); e.target.value = ""; renderProducts();
+    } else {
+      alert("المنتج ده مش متسجل في السيستم!"); e.target.value = "";
+    }
+  }
+});
+
+function addToCart(id) {
+  const p = products.find(x => x.id === id);
+  if(cart[id]) cart[id].qty++; else cart[id] = { ...p, qty: 1 };
+  updateCart();
+}
+
+const discPct = document.getElementById("discountPercent");
+const discAmt = document.getElementById("discountAmount");
+
+discPct.addEventListener("input", () => {
+  let pct = parseFloat(discPct.value) || 0;
+  if(pct > 100) { pct = 100; discPct.value = 100; }
+  discAmt.value = (subtotal * (pct / 100)).toFixed(2);
+  updateTotals();
+});
+
+discAmt.addEventListener("input", () => {
+  let amt = parseFloat(discAmt.value) || 0;
+  if(amt > subtotal) { amt = subtotal; discAmt.value = subtotal; }
+  discPct.value = subtotal > 0 ? ((amt / subtotal) * 100).toFixed(2) : 0;
+  updateTotals();
+});
+
+function updateCart() {
+  const list = document.getElementById("cartList");
+  const entries = Object.values(cart);
+  
+  list.innerHTML = entries.map(e => `
+    <div class="flex justify-between items-center mb-3 bg-white bg-opacity-10 p-2 rounded text-sm">
+      <div class="w-1/2">${escapeHtml(e.name)}</div>
+      <div class="flex gap-2 items-center">
+        <button onclick="cart['${e.id}'].qty--; if(cart['${e.id}'].qty<=0) delete cart['${e.id}']; updateCart();" class="px-2 bg-red-500 rounded text-white">-</button>
+        <span>${e.qty}</span>
+        <button onclick="cart['${e.id}'].qty++; updateCart();" class="px-2 bg-green-500 rounded text-white">+</button>
+      </div>
+      <div>${(e.base_price * e.qty).toFixed(2)}</div>
+    </div>
+  `).join("");
+
+  subtotal = entries.reduce((sum, e) => sum + (e.base_price * e.qty), 0);
+  let pct = parseFloat(discPct.value) || 0;
+  discAmt.value = (subtotal * (pct / 100)).toFixed(2);
+  updateTotals();
+}
+
+function updateTotals() {
+  let amt = parseFloat(discAmt.value) || 0;
+  total = subtotal - amt;
+  document.getElementById("subtotalVal").textContent = subtotal.toFixed(2) + " ج";
+  document.getElementById("totalVal").textContent = total.toFixed(2) + " ج";
+}
+
+document.getElementById("cancelBtn").addEventListener("click", () => {
+  cart = {}; document.getElementById("customerName").value = ""; document.getElementById("orderNotes").value = "";
+  discPct.value = 0; discAmt.value = 0; updateCart();
+});
+
+document.getElementById("checkoutBtn").addEventListener("click", async () => {
+  const entries = Object.values(cart);
+  if(entries.length === 0) return alert("السلة فاضية!");
+  
+  const btn = document.getElementById("checkoutBtn");
+  btn.disabled = true;
+  const originalText = btn.innerHTML;
+  btn.innerHTML = "جاري الحفظ والطباعة... ⏳";
+  btn.classList.replace("bg-green-600", "bg-gray-500");
+
+  const custName = document.getElementById("customerName").value || "عميل نقدي";
+  const notes = document.getElementById("orderNotes").value;
+  const dPct = parseFloat(discPct.value) || 0;
+  const dAmt = parseFloat(discAmt.value) || 0;
+  const receiptNum = `R-${Date.now()}`;
+
+  try {
+    const { data: order, error } = await supabaseClient.from("orders").insert({
+      branch_id: CURRENT_BRANCH, cashier_id: CURRENT_USER.id, receipt_number: receiptNum,
+      total_amount: total, customer_name: custName, notes: notes, 
+      discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash'
+    }).select().single();
+
+    if(error) throw error;
+
+    const orderItems = entries.map(e => ({
+      order_id: order.id, product_id: e.id, quantity: e.qty, unit_price: e.base_price
+    }));
+    
+    const { error: itemsError } = await supabaseClient.from("order_items").insert(orderItems);
+    if(itemsError) throw itemsError;
+
+    printReceipt(receiptNum, entries, custName, notes, dAmt);
+    
+    cart = {}; document.getElementById("customerName").value = ""; document.getElementById("orderNotes").value = "";
+    discPct.value = 0; discAmt.value = 0; updateCart();
+
+  } catch (err) {
+    alert("حدث خطأ أثناء حفظ الفاتورة، يرجى المحاولة تاني!");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    btn.classList.replace("bg-gray-500", "bg-green-600");
+  }
+});
+
+document.getElementById("endShiftBtn").addEventListener("click", () => {
+  document.getElementById("endShiftModal").classList.add("open");
+});
+
+document.getElementById("confirmEndShiftBtn").addEventListener("click", async () => {
+  const actualCash = document.getElementById("actualCashInput").value;
+  if(!actualCash) return alert("أدخل النقدية الفعلية!");
+
+  const btn = document.getElementById("confirmEndShiftBtn");
+  btn.disabled = true;
+  btn.textContent = "جاري الإغلاق...";
+
+  const { data: orders } = await supabaseClient.from("orders").select("total_amount").eq("cashier_id", CURRENT_USER.id).gte("created_at", CURRENT_SHIFT.opened_at);
+  const shiftTotal = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+
+  await supabaseClient.from("cashier_shifts").update({
+    status: "closed", closed_at: new Date().toISOString(),
+    actual_cash: actualCash, expected_cash: shiftTotal + Number(CURRENT_SHIFT.opening_cash), total_sales: shiftTotal
+  }).eq("id", CURRENT_SHIFT.id);
+
+  printZReport(shiftTotal, actualCash, CURRENT_SHIFT.opening_cash);
+
+  setTimeout(async () => {
+    await supabaseClient.auth.signOut();
+    window.location.href = "index.html";
+  }, 2000);
+});
+
+function printReceipt(num, items, cust, note, disc) {
+  const nameEn = escapeHtml(localStorage.getItem('bakeryNameEn') || 'مخبز العائلة');
+  const logoUrl = escapeHtml(localStorage.getItem('bakeryLogoUrl') || '');
+  const welcomeMsg = escapeHtml(localStorage.getItem('welcomeMessage') || 'شكراً لزيارتكم');
+
+  let html = ``;
+  if (logoUrl) {
+      html += `<img src="${logoUrl}" id="receiptLogo" class="r-logo">`;
+  }
+  
+  html += `<div class="r-title">${nameEn}</div><div class="r-divider"></div>
+  <div class="r-row"><span>رقم:</span><span>${escapeHtml(num)}</span></div>`;
+  if(cust) html += `<div class="r-row"><span>العميل:</span><span>${escapeHtml(cust)}</span></div>`;
+  html += `<div class="r-divider"></div><table><tr><th>الصنف</th><th>سعر</th><th>ك</th><th>ج</th></tr>`;
+  items.forEach(i => html += `<tr><td>${escapeHtml(i.name)}</td><td>${Number(i.base_price).toFixed(2)}</td><td>${i.qty}</td><td>${(i.base_price*i.qty).toFixed(2)}</td></tr>`);  
+  html += `</table><div class="r-divider"></div>
+  <div class="r-row"><span>الإجمالي الفرعي:</span><span>${subtotal.toFixed(2)}</span></div>`;
+  if(disc > 0) html += `<div class="r-row"><span>الخصم:</span><span>-${disc.toFixed(2)}</span></div>`;
+  html += `<div class="r-row font-bold"><span>المطلوب:</span><span>${total.toFixed(2)}</span></div>`;
+  if(note) html += `<div class="r-divider"></div><div class="text-center text-xs">ملاحظة: ${escapeHtml(note)}</div>`;
+  
+  html += `<div class="r-divider"></div><div class="text-center font-bold" style="margin-top:5px;">${welcomeMsg}</div>`;
+  
+  document.getElementById("printArea").innerHTML = html;
+
+  if (logoUrl) {
+      let imgElement = document.getElementById("receiptLogo");
+      imgElement.onload = function() { window.print(); };
+      imgElement.onerror = function() { window.print(); }; 
+  } else {
+      window.print();
+  }
+}
+
+function printZReport(sales, actual, opening) {
+  const html = `<div class="r-title">تقرير إغلاق الوردية (Z-Report)</div>
+  <div class="r-divider"></div>
+  <div class="r-row"><span>وقت الفتح:</span><span dir="ltr">${new Date(CURRENT_SHIFT.opened_at).toLocaleString('ar-EG')}</span></div>
+  <div class="r-row"><span>وقت الإغلاق:</span><span dir="ltr">${new Date().toLocaleString('ar-EG')}</span></div>
+  <div class="r-divider"></div>
+  <div class="r-row"><span>العهدة الافتتاحية:</span><span>${Number(opening).toFixed(2)}</span></div>
+  <div class="r-row"><span>إجمالي المبيعات:</span><span>${Number(sales).toFixed(2)}</span></div>
+  <div class="r-divider"></div>
+  <div class="r-row font-bold"><span>المتوقع بالدرج:</span><span>${(Number(sales) + Number(opening)).toFixed(2)}</span></div>
+  <div class="r-row font-bold"><span>الفعلي (الجرد):</span><span>${Number(actual).toFixed(2)}</span></div>
+  <div class="r-row font-bold"><span>العجز/الزيادة:</span><span>${(Number(actual) - (Number(sales) + Number(opening))).toFixed(2)}</span></div>
+  <div class="r-divider"></div><div class="text-center">تم إغلاق الوردية بنجاح</div>`;
+  
+  document.getElementById("printArea").innerHTML = html;
+  window.print();
+}
+
+// تحويل مباشر للوحة الإدارة بدون باسورد إضافي
+document.getElementById("returnAdminBtn").addEventListener("click", () => {
+  window.location.href = "admin_4.html";
+});
+
+function openReceiptSettings() {
+    document.getElementById('receiptSettingsModal').classList.add("open");
+    document.getElementById('bakeryNameEn').value = localStorage.getItem('bakeryNameEn') || 'Family Bakery';
+    document.getElementById('bakeryLogoUrl').value = localStorage.getItem('bakeryLogoUrl') || '';
+    document.getElementById('welcomeMessage').value = localStorage.getItem('welcomeMessage') || 'شكراً لزيارتكم';
+}
+
+function closeReceiptSettings() {
+    document.getElementById('receiptSettingsModal').classList.remove("open");
+}
+
+function saveReceiptSettings() {
+    localStorage.setItem('bakeryNameEn', document.getElementById('bakeryNameEn').value);
+    localStorage.setItem('bakeryLogoUrl', document.getElementById('bakeryLogoUrl').value);
+    localStorage.setItem('welcomeMessage', document.getElementById('welcomeMessage').value);
+    alert('تم حفظ إعدادات الفاتورة بنجاح!');
+    closeReceiptSettings();
+}
+
+init();
+</script>
+</body>
+</html>
