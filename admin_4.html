@@ -98,7 +98,16 @@
           <button onclick="openProductModal()" class="px-5 py-3 rounded-xl bg-yellow-600 font-bold text-sm">➕ إضافة منتج جديد</button>
         </div>
         <div class="stat-card">
-          <table class="w-full text-sm text-right"><thead><tr class="bg-gray-100"><th class="p-3">اسم المنتج</th><th class="p-3">السعر</th></tr></thead><tbody id="productsTableBody"></tbody></table>
+          <table class="w-full text-sm text-right">
+            <thead>
+              <tr class="bg-gray-100">
+                <th class="p-3">اسم المنتج</th>
+                <th class="p-3">السعر</th>
+                <th class="p-3">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="productsTableBody"></tbody>
+          </table>
         </div>
       </section>
 
@@ -399,8 +408,38 @@ async function loadProductStock() {
 }
 
 async function loadProductsTable() { 
-  const { data } = await supabaseClient.from("products").select("*"); 
-  document.getElementById("productsTableBody").innerHTML = data.map(p=>`<tr><td class="p-3">${escapeHtml(p.name)}</td><td class="p-3">${p.base_price} ج</td></tr>`).join(""); 
+  const { data } = await supabaseClient.from("products").select("*").order('is_active', { ascending: false }); 
+  
+  document.getElementById("productsTableBody").innerHTML = data.map(p => `
+    <tr class="border-b transition ${p.is_active ? 'hover:bg-gray-50' : 'opacity-50 bg-gray-100'}">
+      <td class="p-3">${escapeHtml(p.name)}</td>
+      <td class="p-3 font-bold">${p.base_price} ج</td>
+      <td class="p-3">
+        <button onclick="toggleProductStatus(event, '${p.id}', ${p.is_active})" class="text-xs px-3 py-1 rounded font-bold transition ${p.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">
+          ${p.is_active ? 'إيقاف ❌' : 'تفعيل ✅'}
+        </button>
+      </td>
+    </tr>
+  `).join(""); 
+}
+
+// دالة إخفاء أو إعادة تفعيل المنتج
+async function toggleProductStatus(event, id, currentStatus) {
+  const confirmMsg = currentStatus ? "هل أنت متأكد أنك تريد إخفاء هذا المنتج من شاشة الكاشير؟" : "هل تريد إعادة تفعيل هذا المنتج؟";
+  if(!confirm(confirmMsg)) return;
+  
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = "جاري... ⏳";
+
+  const { error } = await supabaseClient.from("products").update({ is_active: !currentStatus }).eq("id", id);
+  
+  if (error) {
+    alert("حدث خطأ أثناء التحديث!");
+    btn.disabled = false;
+  } else {
+    loadProductsTable(); 
+  }
 }
 
 async function loadShifts() { 
