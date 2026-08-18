@@ -33,25 +33,30 @@
         left: 0; 
         right: 0; 
         width: 100%; 
-        padding: 0 5mm; /* هامش متساوي 5 مللي يمين وشمال يريح العين */
+        /* زقينا البون 8 مللي من اليمين عشان نوسطن اللوجو ونحمي الكلام من القص */
+        padding-right: 8mm; 
+        padding-left: 2mm; 
         box-sizing: border-box; 
         direction: rtl;
-        background: #fff; color: #000; font-family: 'Tajawal', sans-serif; font-size: 12px; 
+        background: #fff; color: #000; font-family: 'Tajawal', sans-serif; 
+        font-size: 14px; /* الخط الأساسي كبر */
     }
+    
     .r-logo { max-width: 80px; margin: 0 auto 5px auto; display: block; }
-    .r-title { font-size: 16px; font-weight: bold; text-align: center; }
+    .r-title { font-size: 20px; font-weight: bold; text-align: center; } /* اسم المخبز كبر */
     .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
-    .r-row { display: flex; justify-content: space-between; font-size: 12px;}
+    .r-row { display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; } /* الإجماليات كبرت */
     
-    table { width: 100%; text-align: right; border-collapse: collapse; margin: 8px 0; }
-    th { border-bottom: 1px dashed #000; padding-bottom: 5px; font-size: 11px; }
-    td { padding-top: 5px; padding-bottom: 5px; font-size: 12px; font-weight: bold; word-wrap: break-word; }
+    /* رجعنا table-layout: fixed عشان نمنع الجدول إنه يفرش بره الورقة */
+    table { width: 100%; text-align: right; border-collapse: collapse; margin: 8px 0; table-layout: fixed; }
+    th { border-bottom: 1px dashed #000; padding-bottom: 5px; font-size: 13px; font-weight: bold; }
+    td { padding-top: 5px; padding-bottom: 5px; font-size: 14px; font-weight: bold; word-wrap: break-word; overflow-wrap: break-word; }
     
-    /* توزيع متناسق للأعمدة يملأ الـ 100% */
-    th:nth-child(1), td:nth-child(1) { width: 45%; text-align: right; }
+    /* توزيع متناسق للأعمدة يخلي الكلام الطويل ينزل على سطرين بأمان */
+    th:nth-child(1), td:nth-child(1) { width: 45%; text-align: right; padding-left: 2px; }
     th:nth-child(2), td:nth-child(2) { width: 20%; text-align: center; }
-    th:nth-child(3), td:nth-child(3) { width: 15%; text-align: center; }
-    th:nth-child(4), td:nth-child(4) { width: 20%; text-align: left; }
+    th:nth-child(3), td:nth-child(3) { width: 12%; text-align: center; }
+    th:nth-child(4), td:nth-child(4) { width: 23%; text-align: left; }
   }
 </style>
 </head>
