@@ -26,6 +26,7 @@
   .form-input, .form-select { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; color: var(--ink); }
   .form-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; display: block; }
 
+  /* Print Styles for Reprinting */
   #printArea { display: none; }
   @media print {
     @page { margin: 0; size: 80mm auto; }
@@ -41,7 +42,14 @@
     .r-title { font-size: 16px; font-weight: bold; text-align: center; }
     .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
     .r-row { display: flex; justify-content: space-between; }
-    table { width: 100%; text-align: right; }
+    /* مسافات البون المظبوطة */
+    table { width: 100%; text-align: right; border-collapse: collapse; margin: 8px 0; }
+    th { border-bottom: 1px dashed #000; padding-bottom: 5px; font-size: 11px; }
+    td { padding-top: 5px; padding-bottom: 5px; font-size: 12px; font-weight: bold; }
+    th:nth-child(1), td:nth-child(1) { width: 45%; text-align: right; padding-left: 3px; }
+    th:nth-child(2), td:nth-child(2) { width: 20%; text-align: center; }
+    th:nth-child(3), td:nth-child(3) { width: 15%; text-align: center; }
+    th:nth-child(4), td:nth-child(4) { width: 20%; text-align: left; }
   }
 </style>
 </head>
@@ -407,6 +415,7 @@ async function loadProductStock() {
   document.getElementById("prodProductSelect").innerHTML = productsData.map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join(""); 
 }
 
+// === الدالة المحدثة لعرض المنتجات مع زرار التفعيل/الإيقاف ===
 async function loadProductsTable() { 
   const { data } = await supabaseClient.from("products").select("*").order('is_active', { ascending: false }); 
   
@@ -423,7 +432,7 @@ async function loadProductsTable() {
   `).join(""); 
 }
 
-// دالة إخفاء أو إعادة تفعيل المنتج
+// === الدالة الجديدة لتغيير حالة المنتج في الداتا بيز ===
 async function toggleProductStatus(event, id, currentStatus) {
   const confirmMsg = currentStatus ? "هل أنت متأكد أنك تريد إخفاء هذا المنتج من شاشة الكاشير؟" : "هل تريد إعادة تفعيل هذا المنتج؟";
   if(!confirm(confirmMsg)) return;
@@ -484,12 +493,12 @@ async function reprintOrder(orderId, receiptNum, customerName, totalAmount) {
     if (logoUrl) html += `<img src="${logoUrl}" id="receiptLogo" class="r-logo">`;
     html += `<div class="r-title">${nameEn}</div><div class="text-center text-xs mb-2">(نسخة مطبوعة)</div><div class="r-divider"></div><div class="r-row"><span>رقم:</span><span>${receiptNum}</span></div>`;
     if(customerName && customerName !== 'null' && customerName !== 'عميل نقدي') html += `<div class="r-row"><span>العميل:</span><span>${customerName}</span></div>`;
-    html += `<div class="r-divider"></div><table><tr><th>الصنف</th><th>سعر</th><th>ك</th><th>ج</th></tr>`;
     
+    // الجدول بالتنسيق الجديد اللي بيعرض السعر
+    html += `<div class="r-divider"></div><table><tr><th>الصنف</th><th>سعر</th><th>ك</th><th>ج</th></tr>`;
     items.forEach(i => {
         html += `<tr><td>${escapeHtml(i.products.name)}</td><td>${Number(i.unit_price).toFixed(2)}</td><td>${i.quantity}</td><td>${(i.unit_price * i.quantity).toFixed(2)}</td></tr>`;
     });
-    
     html += `</table><div class="r-divider"></div><div class="r-row font-bold"><span>الإجمالي:</span><span>${Number(totalAmount).toFixed(2)}</span></div><div class="r-divider"></div><div class="text-center font-bold" style="margin-top:5px;">${welcomeMsg}</div>`;
     
     document.getElementById("printArea").innerHTML = html;
