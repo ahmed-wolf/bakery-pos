@@ -35,7 +35,19 @@
     .r-title { font-size: 16px; font-weight: bold; text-align: center; }
     .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
     .r-row { display: flex; justify-content: space-between; }
-    table { width: 100%; text-align: right; }
+    
+    /* === تعديلات البون الجديدة لضبط المسافات === */
+    table { width: 100%; text-align: right; border-collapse: collapse; margin: 8px 0; }
+    th { border-bottom: 1px dashed #000; padding-bottom: 5px; font-size: 11px; }
+    td { padding-top: 5px; padding-bottom: 5px; font-size: 12px; font-weight: bold; }
+    /* الصنف ياخد أكبر مساحة */
+    th:nth-child(1), td:nth-child(1) { width: 45%; text-align: right; padding-left: 3px; }
+    /* السعر */
+    th:nth-child(2), td:nth-child(2) { width: 20%; text-align: center; }
+    /* الكمية */
+    th:nth-child(3), td:nth-child(3) { width: 15%; text-align: center; }
+    /* الإجمالي متزاح لليسار عشان يبعد عن اللي قبله */
+    th:nth-child(4), td:nth-child(4) { width: 20%; text-align: left; }
   }
 </style>
 </head>
@@ -61,12 +73,35 @@
 </header>
 
 <div class="flex-1 flex overflow-hidden">
+  
+  <!-- منطقة المنتجات -->
   <main class="flex-1 flex flex-col p-4 border-l border-gray-300">
     <input type="text" id="productSearch" placeholder="🔍 ابحث عن منتج أو باركود..." class="form-input mb-4 p-3 text-lg">
     <div id="categoryTabs" class="flex gap-2 overflow-x-auto mb-4 pb-2"></div>
     <div id="productGrid" class="flex-1 overflow-y-auto grid grid-cols-3 gap-3 content-start"></div>
   </main>
 
+  <!-- === لوحة الأرقام السريعة (الكمية) === -->
+  <div class="w-32 bg-gray-100 border-l border-gray-300 flex flex-col p-3 shrink-0 select-none shadow-inner z-10">
+    <div class="text-center text-xs font-bold text-gray-500 mb-1">الكمية المضافة</div>
+    <div id="multiplierDisplay" class="bg-white border-2 border-blue-400 rounded-lg text-center font-extrabold text-2xl py-2 mb-3 shadow-inner text-blue-600">1</div>
+    
+    <div class="grid grid-cols-2 gap-2 flex-1 content-start">
+      <button onclick="appendMultiplier(7)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">7</button>
+      <button onclick="appendMultiplier(8)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">8</button>
+      <button onclick="appendMultiplier(9)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">9</button>
+      <button onclick="appendMultiplier(4)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">4</button>
+      <button onclick="appendMultiplier(5)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">5</button>
+      <button onclick="appendMultiplier(6)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">6</button>
+      <button onclick="appendMultiplier(1)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">1</button>
+      <button onclick="appendMultiplier(2)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">2</button>
+      <button onclick="appendMultiplier(3)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">3</button>
+      <button onclick="appendMultiplier(0)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition col-span-2">0</button>
+      <button onclick="clearMultiplier()" class="bg-red-100 text-red-600 rounded-lg py-3 font-bold text-lg shadow-sm border border-red-200 hover:bg-red-200 active:bg-red-300 transition col-span-2">مسح (C)</button>
+    </div>
+  </div>
+
+  <!-- منطقة السلة -->
   <aside class="w-1/3 flex flex-col" style="background: var(--crust-2); color: var(--cream);">
     <div class="p-4 flex-1 overflow-y-auto" id="cartList"></div>
     
@@ -98,6 +133,7 @@
   </aside>
 </div>
 
+<!-- ================= MODALS ================= -->
 <div id="startShiftModal" class="modal-overlay">
   <div class="modal-content text-black">
     <div class="text-3xl text-center mb-2">🔓</div>
@@ -145,7 +181,26 @@ let CURRENT_USER = null; let CURRENT_BRANCH = null; let CURRENT_SHIFT = null;
 let products = []; let cart = {};
 let subtotal = 0; let total = 0;
 
-// دالة تنظيف النصوص (الحماية من XSS)
+// === كود لوحة الأرقام (Numpad) ===
+let currentMultiplierStr = "";
+
+function appendMultiplier(num) {
+  if (currentMultiplierStr.length > 3) return; // أقصى حد 9999 عشان ميهنجش
+  currentMultiplierStr += num.toString();
+  document.getElementById('multiplierDisplay').textContent = currentMultiplierStr;
+}
+
+function clearMultiplier() {
+  currentMultiplierStr = "";
+  document.getElementById('multiplierDisplay').textContent = "1";
+}
+
+function getMultiplier() {
+  let val = parseInt(currentMultiplierStr);
+  return (isNaN(val) || val <= 0) ? 1 : val; // لو مكتبش حاجة نعتبرها 1
+}
+// ==================================
+
 function escapeHtml(str) {
   if (!str) return '';
   const div = document.createElement('div');
@@ -241,7 +296,9 @@ document.getElementById("productSearch").addEventListener("keypress", (e) => {
         if(cart[p.id]) cart[p.id].qty += weightInKg; 
         else cart[p.id] = { ...p, qty: weightInKg };
         
-        updateCart(); e.target.value = ""; renderProducts(); return;
+        updateCart(); e.target.value = ""; renderProducts(); 
+        clearMultiplier(); // تصفير الآلة الحاسبة
+        return;
       }
     }
 
@@ -256,8 +313,16 @@ document.getElementById("productSearch").addEventListener("keypress", (e) => {
 
 function addToCart(id) {
   const p = products.find(x => x.id === id);
-  if(cart[id]) cart[id].qty++; else cart[id] = { ...p, qty: 1 };
+  const qtyToAdd = getMultiplier(); // نسحب الكمية من الآلة الحاسبة
+  
+  if(cart[id]) {
+      cart[id].qty += qtyToAdd; 
+  } else {
+      cart[id] = { ...p, qty: qtyToAdd };
+  }
+  
   updateCart();
+  clearMultiplier(); // نرجع الآلة الحاسبة لـ 1 تلقائي
 }
 
 const discPct = document.getElementById("discountPercent");
@@ -309,6 +374,7 @@ function updateTotals() {
 document.getElementById("cancelBtn").addEventListener("click", () => {
   cart = {}; document.getElementById("customerName").value = ""; document.getElementById("orderNotes").value = "";
   discPct.value = 0; discAmt.value = 0; updateCart();
+  clearMultiplier();
 });
 
 document.getElementById("checkoutBtn").addEventListener("click", async () => {
@@ -347,6 +413,7 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
     
     cart = {}; document.getElementById("customerName").value = ""; document.getElementById("orderNotes").value = "";
     discPct.value = 0; discAmt.value = 0; updateCart();
+    clearMultiplier();
 
   } catch (err) {
     alert("حدث خطأ أثناء حفظ الفاتورة، يرجى المحاولة تاني!");
@@ -399,7 +466,9 @@ function printReceipt(num, items, cust, note, disc) {
   <div class="r-row"><span>رقم:</span><span>${escapeHtml(num)}</span></div>`;
   if(cust) html += `<div class="r-row"><span>العميل:</span><span>${escapeHtml(cust)}</span></div>`;
   html += `<div class="r-divider"></div><table><tr><th>الصنف</th><th>سعر</th><th>ك</th><th>ج</th></tr>`;
+  
   items.forEach(i => html += `<tr><td>${escapeHtml(i.name)}</td><td>${Number(i.base_price).toFixed(2)}</td><td>${i.qty}</td><td>${(i.base_price*i.qty).toFixed(2)}</td></tr>`);  
+  
   html += `</table><div class="r-divider"></div>
   <div class="r-row"><span>الإجمالي الفرعي:</span><span>${subtotal.toFixed(2)}</span></div>`;
   if(disc > 0) html += `<div class="r-row"><span>الخصم:</span><span>-${disc.toFixed(2)}</span></div>`;
@@ -437,7 +506,6 @@ function printZReport(sales, actual, opening) {
   window.print();
 }
 
-// تحويل مباشر للوحة الإدارة بدون باسورد إضافي
 document.getElementById("returnAdminBtn").addEventListener("click", () => {
   window.location.href = "admin_4.html";
 });
