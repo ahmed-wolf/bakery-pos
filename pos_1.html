@@ -25,25 +25,50 @@
     @page { margin: 0; size: 80mm auto; }
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
-    #printArea { 
-        display: block; position: absolute; top: 0; right: 0; 
-        width: 75mm; padding-right: 12mm; padding-left: 2mm; 
-        box-sizing: border-box; direction: rtl;
-        background: #fff; color: #000; font-family: 'Tajawal', sans-serif; font-size: 12px; 
-    }
-    .r-logo { max-width: 80px; margin: 0 auto 5px auto; display: block; }
-    .r-title { font-size: 16px; font-weight: bold; text-align: center; }
-    .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
-    .r-row { display: flex; justify-content: space-between; }
     
-    /* === تعديلات البون النهائية لضبط المسافات إجبارياً === */
-    table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: 8px 0; direction: rtl; }
-    th { border-bottom: 1px dashed #000; padding-bottom: 5px; font-size: 11px; }
-    td { padding-top: 5px; padding-bottom: 5px; font-size: 12px; font-weight: bold; word-wrap: break-word; }
-    th:nth-child(1), td:nth-child(1) { width: 40%; text-align: right; padding-left: 2px; }
-    th:nth-child(2), td:nth-child(2) { width: 22%; text-align: center; }
-    th:nth-child(3), td:nth-child(3) { width: 13%; text-align: center; }
-    th:nth-child(4), td:nth-child(4) { width: 25%; text-align: left; }
+    #printArea { 
+        display: block !important; 
+        position: absolute !important; 
+        top: 0 !important; 
+        right: 0 !important; 
+        width: 100% !important; 
+        max-width: 75mm !important; /* تحديد العرض الإجباري للطابعة 80 مللي */
+        padding-right: 5mm !important; 
+        padding-left: 5mm !important; 
+        box-sizing: border-box !important; 
+        direction: rtl !important;
+        background: #fff !important; 
+        color: #000 !important; 
+        font-family: 'Tajawal', sans-serif !important; 
+    }
+    
+    .r-logo { max-width: 80px !important; margin: 0 auto 5px auto !important; display: block !important; }
+    .r-title { font-size: 16px !important; font-weight: bold !important; text-align: center !important; }
+    .r-divider { border-top: 1px dashed #000 !important; margin: 8px 0 !important; }
+    .r-row { display: flex !important; justify-content: space-between !important; font-size: 12px !important;}
+    
+    /* === إجبار الجدول على التمدد والمسافات الصارمة === */
+    table { 
+        width: 100% !important; 
+        table-layout: fixed !important; 
+        border-collapse: collapse !important; 
+        margin: 8px 0 !important; 
+        direction: rtl !important; 
+    }
+    th { border-bottom: 1px dashed #000 !important; padding-bottom: 5px !important; font-size: 11px !important; }
+    td { padding-top: 5px !important; padding-bottom: 5px !important; font-size: 12px !important; font-weight: bold !important; word-wrap: break-word !important; }
+    
+    /* الصنف - مساحة أكبر عشان الاسم */
+    th:nth-child(1), td:nth-child(1) { width: 45% !important; text-align: right !important; padding-right: 2px !important; }
+    
+    /* السعر */
+    th:nth-child(2), td:nth-child(2) { width: 20% !important; text-align: center !important; }
+    
+    /* الكمية */
+    th:nth-child(3), td:nth-child(3) { width: 12% !important; text-align: center !important; }
+    
+    /* الإجمالي */
+    th:nth-child(4), td:nth-child(4) { width: 23% !important; text-align: left !important; padding-left: 2px !important;}
   }
 </style>
 </head>
