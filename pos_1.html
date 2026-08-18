@@ -21,7 +21,7 @@
   .modal-content { background: var(--cream); border-radius: 16px; padding: 20px; width: 400px; max-width: 90%; }
   
   #printArea { display: none; }
-@media print {
+  @media print {
     @page { margin: 0; size: 80mm auto; }
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
@@ -200,7 +200,7 @@ function escapeHtml(str) {
 }
 
 function openDrawer() {
-  document.getElementById("printArea").innerHTML = `<div style="text-align:center; font-size:10px;">-</div>`;
+  document.getElementById("printArea").innerHTML = "";
   window.print();
 }
 
