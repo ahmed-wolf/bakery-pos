@@ -21,7 +21,7 @@
   .modal-content { background: var(--cream); border-radius: 16px; padding: 20px; width: 400px; max-width: 90%; }
   
   #printArea { display: none; }
-@media print {
+  @media print {
     @page { margin: 0; size: 80mm auto; }
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
@@ -33,7 +33,6 @@
         background: #fff; color: #000; font-family: 'Tajawal', sans-serif; font-size: 14px; 
     }
     
-    /* اللوجو بحجم وسط ممتاز ومرفوع سِنة بسيطة */
     .r-logo { 
         max-width: 95px; 
         margin: -5px auto 5px auto; 
@@ -150,7 +149,6 @@
   </div>
 </div>
 
-<!-- باقي الموديلز -->
 <div id="startShiftModal" class="modal-overlay">
   <div class="modal-content text-black">
     <div class="text-3xl text-center mb-2">🔓</div>
@@ -206,7 +204,7 @@ let EDITING_RECEIPT_NUM = null;
 let currentMultiplierStr = "";
 
 function appendMultiplier(num) {
-  if (currentMultiplierStr.length > 3) return; // أقصى حد 9999
+  if (currentMultiplierStr.length > 3) return; 
   currentMultiplierStr += num.toString();
   document.getElementById('multiplierDisplay').textContent = currentMultiplierStr;
 }
@@ -218,7 +216,7 @@ function clearMultiplier() {
 
 function getMultiplier() {
   let val = parseInt(currentMultiplierStr);
-  return (isNaN(val) || val <= 0) ? 1 : val; // لو مكتبش حاجة نعتبرها 1
+  return (isNaN(val) || val <= 0) ? 1 : val; 
 }
 // ==================================
 
@@ -392,7 +390,7 @@ function updateTotals() {
   document.getElementById("totalVal").textContent = total.toFixed(2) + " ج";
 }
 
-// دالة تفريغ السلة وإلغاء وضع التعديل
+// دالة تفريغ السلة وإلغاء وضع التعديل (آمنة 100%)
 function resetCartUI() {
   cart = {}; 
   document.getElementById("customerName").value = ""; 
@@ -406,11 +404,10 @@ function resetCartUI() {
   EDITING_RECEIPT_NUM = null;
   
   const btn = document.getElementById("checkoutBtn");
+  btn.disabled = false;
   btn.innerHTML = "تأكيد وطباعة 🖨️";
-  if(btn.classList.contains("bg-indigo-600")) {
-      btn.classList.replace("bg-indigo-600", "bg-green-600");
-      btn.classList.replace("hover:bg-indigo-700", "hover:bg-green-700");
-  }
+  // إجبار المتصفح يرجع الكلاسات الأساسية بدون أي تداخل
+  btn.className = "w-full py-3 rounded-xl font-bold text-white mb-2 transition-colors bg-green-600 hover:bg-green-700";
 }
 
 document.getElementById("cancelBtn").addEventListener("click", resetCartUI);
@@ -422,9 +419,7 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
   const btn = document.getElementById("checkoutBtn");
   btn.disabled = true;
   btn.innerHTML = "جاري الحفظ والطباعة... ⏳";
-  
-  if (btn.classList.contains("bg-green-600")) btn.classList.replace("bg-green-600", "bg-gray-500");
-  if (btn.classList.contains("bg-indigo-600")) btn.classList.replace("bg-indigo-600", "bg-gray-500");
+  btn.className = "w-full py-3 rounded-xl font-bold text-white mb-2 transition-colors bg-gray-500";
 
   const custName = document.getElementById("customerName").value || "عميل نقدي";
   const notes = document.getElementById("orderNotes").value;
@@ -467,13 +462,17 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
     if(itemsError) throw itemsError;
 
     printReceipt(receiptNum, entries, custName, notes, dAmt);
+    
+    // تصفير الواجهة تماماً ورجوع الزرار لأخضر
     resetCartUI();
 
   } catch (err) {
     alert("حدث خطأ أثناء الحفظ، يرجى المحاولة تاني!");
     btn.disabled = false;
     btn.innerHTML = EDITING_ORDER_ID ? "حفظ التعديل وطباعة 🖨️" : "تأكيد وطباعة 🖨️";
-    btn.classList.replace("bg-gray-500", EDITING_ORDER_ID ? "bg-indigo-600" : "bg-green-600");
+    btn.className = EDITING_ORDER_ID ? 
+        "w-full py-3 rounded-xl font-bold text-white mb-2 transition-colors bg-indigo-600 hover:bg-indigo-700" : 
+        "w-full py-3 rounded-xl font-bold text-white mb-2 transition-colors bg-green-600 hover:bg-green-700";
   }
 });
 
@@ -495,7 +494,6 @@ async function searchOrderForEdit() {
     btn.disabled = true; btn.textContent = "جاري البحث...";
 
     try {
-        // 1. نجيب الفاتورة
         const { data: order, error: orderError } = await supabaseClient
             .from("orders")
             .select("*")
@@ -504,7 +502,6 @@ async function searchOrderForEdit() {
         
         if(orderError || !order) throw new Error("الفاتورة دي مش موجودة أو الرقم غلط!");
 
-        // 2. نجيب منتجات الفاتورة
         const { data: items, error: itemsError } = await supabaseClient
             .from("order_items")
             .select("*, products(*)")
@@ -512,7 +509,6 @@ async function searchOrderForEdit() {
 
         if(itemsError) throw itemsError;
 
-        // 3. نحطهم في السلة
         cart = {};
         items.forEach(item => {
             cart[item.product_id] = {
@@ -532,11 +528,9 @@ async function searchOrderForEdit() {
         EDITING_ORDER_ID = order.id;
         EDITING_RECEIPT_NUM = order.receipt_number;
 
-        // تغيير شكل زرار الدفع عشان نأكد إنه تعديل
         const checkoutBtn = document.getElementById('checkoutBtn');
         checkoutBtn.innerHTML = "حفظ التعديل وطباعة 🖨️";
-        checkoutBtn.classList.replace('bg-green-600', 'bg-indigo-600');
-        checkoutBtn.classList.replace('hover:bg-green-700', 'hover:bg-indigo-700');
+        checkoutBtn.className = "w-full py-3 rounded-xl font-bold text-white mb-2 transition-colors bg-indigo-600 hover:bg-indigo-700";
 
         updateCart();
         closeEditOrderModal();
