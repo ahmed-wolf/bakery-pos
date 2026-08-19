@@ -62,16 +62,19 @@
     <div class="w-9 h-9 rounded-full flex items-center justify-center text-lg" style="background: var(--honey);">🥐</div>
     <h1 class="font-display font-bold text-lg">نقطة البيع</h1>
   </div>
-  <div class="flex gap-3">
-    <button onclick="openDrawer()" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition mx-2">
+  <div class="flex gap-2">
+    <button onclick="openEditOrderModal()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg font-bold text-sm hover:bg-indigo-700 transition">
+        🔍 تعديل فاتورة
+    </button>
+    <button onclick="openDrawer()" class="px-3 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition">
       💵 فتح الدرج
     </button>
-    <button onclick="openReceiptSettings()" class="bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold text-sm hover:bg-yellow-600 transition mx-2">
+    <button onclick="openReceiptSettings()" class="bg-yellow-500 text-black px-3 py-2 rounded-lg font-bold text-sm hover:bg-yellow-600 transition">
         ⚙️ إعدادات الفاتورة
     </button>
-    <button id="endShiftBtn" class="px-4 py-2 rounded-xl font-bold text-sm bg-red-600 text-white hover:bg-red-700">🔒 إنهاء الوردية وتقفيل الدرج</button>
-    <button id="returnAdminBtn" class="hidden bg-gray-800 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-900 transition mx-2">
-      ⚙️ لوحة الإدارة
+    <button id="endShiftBtn" class="px-3 py-2 rounded-lg font-bold text-sm bg-red-600 text-white hover:bg-red-700">🔒 إغلاق الوردية</button>
+    <button id="returnAdminBtn" class="hidden bg-gray-800 text-white px-3 py-2 rounded-lg font-bold text-sm hover:bg-gray-900 transition">
+      لوحة الإدارة
     </button>
   </div>
 </header>
@@ -134,6 +137,20 @@
   </aside>
 </div>
 
+<!-- Modal تعديل الفاتورة -->
+<div id="editOrderModal" class="modal-overlay">
+  <div class="modal-content text-black">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-xl">🔍 بحث عن فاتورة لتعديلها</h3>
+        <button onclick="closeEditOrderModal()" class="text-gray-500 font-bold hover:text-red-500 text-xl">✕</button>
+    </div>
+    <p class="text-sm text-gray-600 mb-4">اكتب رقم الفاتورة (مثال: R-123456789) لاسترجاعها للسلة والتعديل عليها.</p>
+    <input type="text" id="searchReceiptInput" class="form-input text-center text-lg py-3 mb-4" placeholder="رقم الفاتورة...">
+    <button id="searchOrderBtn" onclick="searchOrderForEdit()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors">بحث واسترجاع للسلة</button>
+  </div>
+</div>
+
+<!-- باقي الموديلز -->
 <div id="startShiftModal" class="modal-overlay">
   <div class="modal-content text-black">
     <div class="text-3xl text-center mb-2">🔓</div>
@@ -180,6 +197,10 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let CURRENT_USER = null; let CURRENT_BRANCH = null; let CURRENT_SHIFT = null;
 let products = []; let cart = {};
 let subtotal = 0; let total = 0;
+
+// متغيرات التعديل
+let EDITING_ORDER_ID = null;
+let EDITING_RECEIPT_NUM = null;
 
 // === كود لوحة الأرقام (Numpad) ===
 let currentMultiplierStr = "";
@@ -371,11 +392,28 @@ function updateTotals() {
   document.getElementById("totalVal").textContent = total.toFixed(2) + " ج";
 }
 
-document.getElementById("cancelBtn").addEventListener("click", () => {
-  cart = {}; document.getElementById("customerName").value = ""; document.getElementById("orderNotes").value = "";
-  discPct.value = 0; discAmt.value = 0; updateCart();
+// دالة تفريغ السلة وإلغاء وضع التعديل
+function resetCartUI() {
+  cart = {}; 
+  document.getElementById("customerName").value = ""; 
+  document.getElementById("orderNotes").value = "";
+  discPct.value = 0; 
+  discAmt.value = 0; 
+  updateCart();
   clearMultiplier();
-});
+  
+  EDITING_ORDER_ID = null;
+  EDITING_RECEIPT_NUM = null;
+  
+  const btn = document.getElementById("checkoutBtn");
+  btn.innerHTML = "تأكيد وطباعة 🖨️";
+  if(btn.classList.contains("bg-indigo-600")) {
+      btn.classList.replace("bg-indigo-600", "bg-green-600");
+      btn.classList.replace("hover:bg-indigo-700", "hover:bg-green-700");
+  }
+}
+
+document.getElementById("cancelBtn").addEventListener("click", resetCartUI);
 
 document.getElementById("checkoutBtn").addEventListener("click", async () => {
   const entries = Object.values(cart);
@@ -383,46 +421,134 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
   
   const btn = document.getElementById("checkoutBtn");
   btn.disabled = true;
-  const originalText = btn.innerHTML;
   btn.innerHTML = "جاري الحفظ والطباعة... ⏳";
-  btn.classList.replace("bg-green-600", "bg-gray-500");
+  
+  if (btn.classList.contains("bg-green-600")) btn.classList.replace("bg-green-600", "bg-gray-500");
+  if (btn.classList.contains("bg-indigo-600")) btn.classList.replace("bg-indigo-600", "bg-gray-500");
 
   const custName = document.getElementById("customerName").value || "عميل نقدي";
   const notes = document.getElementById("orderNotes").value;
   const dPct = parseFloat(discPct.value) || 0;
   const dAmt = parseFloat(discAmt.value) || 0;
-  const receiptNum = `R-${Date.now()}`;
+  const receiptNum = EDITING_ORDER_ID ? EDITING_RECEIPT_NUM : `R-${Date.now()}`;
 
   try {
-    const { data: order, error } = await supabaseClient.from("orders").insert({
-      branch_id: CURRENT_BRANCH, cashier_id: CURRENT_USER.id, receipt_number: receiptNum,
-      total_amount: total, customer_name: custName, notes: notes, 
-      discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash'
-    }).select().single();
+    let targetOrderId = null;
 
-    if(error) throw error;
+    if (EDITING_ORDER_ID) {
+        // تحديث الفاتورة القديمة
+        const { error: updateError } = await supabaseClient.from("orders").update({
+            total_amount: total, customer_name: custName, notes: notes, 
+            discount_percentage: dPct, discount_amount: dAmt
+        }).eq("id", EDITING_ORDER_ID);
+        if(updateError) throw updateError;
+        
+        targetOrderId = EDITING_ORDER_ID;
+        
+        // مسح المنتجات القديمة بتاعتها
+        await supabaseClient.from("order_items").delete().eq("order_id", targetOrderId);
+    } else {
+        // إنشاء فاتورة جديدة
+        const { data: order, error } = await supabaseClient.from("orders").insert({
+          branch_id: CURRENT_BRANCH, cashier_id: CURRENT_USER.id, receipt_number: receiptNum,
+          total_amount: total, customer_name: custName, notes: notes, 
+          discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash'
+        }).select().single();
+        if(error) throw error;
+        
+        targetOrderId = order.id;
+    }
 
+    // إضافة المنتجات في كلتا الحالتين
     const orderItems = entries.map(e => ({
-      order_id: order.id, product_id: e.id, quantity: e.qty, unit_price: e.base_price
+      order_id: targetOrderId, product_id: e.id, quantity: e.qty, unit_price: e.base_price
     }));
-    
     const { error: itemsError } = await supabaseClient.from("order_items").insert(orderItems);
     if(itemsError) throw itemsError;
 
     printReceipt(receiptNum, entries, custName, notes, dAmt);
-    
-    cart = {}; document.getElementById("customerName").value = ""; document.getElementById("orderNotes").value = "";
-    discPct.value = 0; discAmt.value = 0; updateCart();
-    clearMultiplier();
+    resetCartUI();
 
   } catch (err) {
-    alert("حدث خطأ أثناء حفظ الفاتورة، يرجى المحاولة تاني!");
-  } finally {
+    alert("حدث خطأ أثناء الحفظ، يرجى المحاولة تاني!");
     btn.disabled = false;
-    btn.innerHTML = originalText;
-    btn.classList.replace("bg-gray-500", "bg-green-600");
+    btn.innerHTML = EDITING_ORDER_ID ? "حفظ التعديل وطباعة 🖨️" : "تأكيد وطباعة 🖨️";
+    btn.classList.replace("bg-gray-500", EDITING_ORDER_ID ? "bg-indigo-600" : "bg-green-600");
   }
 });
+
+// ==== دوال تعديل الفاتورة ====
+function openEditOrderModal() {
+    document.getElementById('editOrderModal').classList.add("open");
+    document.getElementById('searchReceiptInput').value = "";
+}
+
+function closeEditOrderModal() {
+    document.getElementById('editOrderModal').classList.remove("open");
+}
+
+async function searchOrderForEdit() {
+    const receiptNum = document.getElementById('searchReceiptInput').value.trim();
+    if(!receiptNum) return alert("اكتب رقم الفاتورة الأول!");
+
+    const btn = document.getElementById('searchOrderBtn');
+    btn.disabled = true; btn.textContent = "جاري البحث...";
+
+    try {
+        // 1. نجيب الفاتورة
+        const { data: order, error: orderError } = await supabaseClient
+            .from("orders")
+            .select("*")
+            .eq("receipt_number", receiptNum)
+            .single();
+        
+        if(orderError || !order) throw new Error("الفاتورة دي مش موجودة أو الرقم غلط!");
+
+        // 2. نجيب منتجات الفاتورة
+        const { data: items, error: itemsError } = await supabaseClient
+            .from("order_items")
+            .select("*, products(*)")
+            .eq("order_id", order.id);
+
+        if(itemsError) throw itemsError;
+
+        // 3. نحطهم في السلة
+        cart = {};
+        items.forEach(item => {
+            cart[item.product_id] = {
+                id: item.product_id,
+                name: item.products.name,
+                base_price: item.unit_price,
+                qty: item.quantity,
+                barcode: item.products.barcode
+            };
+        });
+
+        document.getElementById("customerName").value = order.customer_name === "عميل نقدي" ? "" : (order.customer_name || "");
+        document.getElementById("orderNotes").value = order.notes || "";
+        document.getElementById("discountPercent").value = order.discount_percentage || 0;
+        document.getElementById("discountAmount").value = order.discount_amount || 0;
+
+        EDITING_ORDER_ID = order.id;
+        EDITING_RECEIPT_NUM = order.receipt_number;
+
+        // تغيير شكل زرار الدفع عشان نأكد إنه تعديل
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        checkoutBtn.innerHTML = "حفظ التعديل وطباعة 🖨️";
+        checkoutBtn.classList.replace('bg-green-600', 'bg-indigo-600');
+        checkoutBtn.classList.replace('hover:bg-green-700', 'hover:bg-indigo-700');
+
+        updateCart();
+        closeEditOrderModal();
+        alert("تم استرجاع الفاتورة للسلة.. تقدر تعدل براحتك وتدوس حفظ.");
+
+    } catch (err) {
+        alert(err.message || "حدث خطأ أثناء البحث");
+    } finally {
+        btn.disabled = false; btn.textContent = "بحث واسترجاع للسلة";
+    }
+}
+// ==================================
 
 document.getElementById("endShiftBtn").addEventListener("click", () => {
   document.getElementById("endShiftModal").classList.add("open");
