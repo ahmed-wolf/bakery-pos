@@ -38,7 +38,7 @@
         box-sizing: border-box; direction: rtl;
         background: #fff; color: #000; font-family: 'Tajawal', sans-serif; font-size: 12px; 
     }
-    .r-logo { max-width: 80px; margin: 0 auto 5px auto; display: block; }
+    .r-logo { max-width: 80px; margin: 0 auto 5px auto; display: block; filter: grayscale(100%) contrast(300%); }
     .r-title { font-size: 16px; font-weight: bold; text-align: center; }
     .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
     .r-row { display: flex; justify-content: space-between; }
@@ -66,7 +66,7 @@
     <nav class="flex-1 px-6 py-2 flex flex-col gap-1.5 overflow-y-auto">
       <div class="nav-item active" data-tab="overview"><span>📊</span><span>نظرة عامة</span></div>
       <div class="nav-item" data-tab="inventory"><span>📦</span><span>المخزن والإنتاج</span></div>
-      <div class="nav-item" data-tab="products"><span>🥐</span><span>المنتجات والوصفات</span></div>
+      <div class="nav-item" data-tab="products"><span>🥐</span><span>المنتجات والخامات</span></div>
       <div class="nav-item" data-tab="shifts"><span>👥</span><span>الورديات والمبيعات</span></div>
       <div class="nav-item" data-tab="hr"><span>🏢</span><span>الموارد البشرية</span></div>
     </nav>
@@ -101,11 +101,11 @@
       </section>
 
       <section id="tab-products" class="content-section">
-        <div class="mb-6 flex justify-between">
-          <h2 class="font-display font-extrabold text-2xl">🥐 المنتجات والوصفات</h2>
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="font-display font-extrabold text-2xl">🥐 المنتجات</h2>
           <button onclick="openProductModal()" class="px-5 py-3 rounded-xl bg-yellow-600 font-bold text-sm">➕ إضافة منتج جديد</button>
         </div>
-        <div class="stat-card">
+        <div class="stat-card mb-8">
           <table class="w-full text-sm text-right">
             <thead>
               <tr class="bg-gray-100">
@@ -115,6 +115,23 @@
               </tr>
             </thead>
             <tbody id="productsTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="font-display font-extrabold text-2xl">🌾 الخامات المسجلة بالسيستم</h2>
+          <button id="addNewIngBtnStandAlone" class="px-5 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 font-bold text-sm">➕ إضافة خامة جديدة</button>
+        </div>
+        <div class="stat-card">
+          <table class="w-full text-sm text-right">
+            <thead>
+              <tr class="bg-gray-100">
+                <th class="p-3">اسم الخامة</th>
+                <th class="p-3">المعيار (الوحدة)</th>
+                <th class="p-3">تعديل</th>
+              </tr>
+            </thead>
+            <tbody id="ingredientsTableBody"></tbody>
           </table>
         </div>
       </section>
@@ -293,21 +310,32 @@ document.getElementById("saveNewStaffBtn").addEventListener("click", async () =>
   loadPayrollSummary();
 });
 
-document.getElementById("addNewIngBtn").addEventListener("click", async () => {
+// دالة مشتركة لإضافة خامة جديدة
+async function createNewIngredient() {
   const name = prompt("اسم الخامة الجديدة (مثال: زيت، سكر، خميرة):");
   if(!name) return;
-  let unit = prompt("وحدة القياس (اكتب: gram أو liter أو ml أو kg):", "gram");
+  let unit = prompt("وحدة القياس (اكتب: gram أو liter أو ml أو kg أو قطعة):", "gram");
   if(!unit) return;
 
   if(unit.trim() === "جرام") unit = "gram";
   if(unit.trim() === "لتر") unit = "liter";
   if(unit.trim() === "ملي") unit = "ml";
   if(unit.trim() === "كيلو") unit = "kg";
+  if(unit.trim() === "قطعة" || unit.trim() === "قطعه") unit = "piece";
+
+  const validUnits = ['gram', 'kg', 'liter', 'ml', 'piece'];
+  if (!validUnits.includes(unit)) {
+      alert("معيار غير صحيح! الرجاء إدخال وحدة صحيحة.");
+      return;
+  }
 
   const { error } = await supabaseClient.from("ingredients").insert({ name: name, unit: unit });
   if (error) { alert("حدث خطأ أثناء الإضافة: " + error.message); } 
   else { alert("تم إضافة الخامة بنجاح!"); await loadIngredientsCatalog(); }
-});
+}
+
+document.getElementById("addNewIngBtn").addEventListener("click", createNewIngredient);
+document.getElementById("addNewIngBtnStandAlone").addEventListener("click", createNewIngredient);
 
 document.getElementById("receiptConfirmBtn").addEventListener("click", async () => {
   const ingId = document.getElementById("receiptIngredientSelect").value;
@@ -396,10 +424,59 @@ document.getElementById("productSaveBtn").addEventListener("click", async () => 
   loadProductsTable();
 });
 
+// تحميل قائمة الخامات للجدول الجديد وإضافة زر التعديل
 async function loadIngredientsCatalog() { 
-  const { data } = await supabaseClient.from("ingredients").select("*"); 
+  const { data } = await supabaseClient.from("ingredients").select("*").order('id'); 
+  
+  // تحديث قوائم الاختيار في شاشات الإضافة
   document.getElementById("receiptIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
   document.getElementById("recipeIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
+  
+  // تحديث جدول الخامات الجديد في صفحة "المنتجات والخامات"
+  document.getElementById("ingredientsTableBody").innerHTML = data.map(i => `
+    <tr class="border-b hover:bg-gray-50 transition">
+      <td class="p-3 font-bold text-gray-800">${escapeHtml(i.name)}</td>
+      <td class="p-3 font-bold text-blue-600">${escapeHtml(i.unit)}</td>
+      <td class="p-3">
+        <button onclick="editIngredient(${i.id}, '${escapeHtml(i.name)}', '${escapeHtml(i.unit)}')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs font-bold transition shadow-sm">
+          تعديل المعيار ✏️
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+// دالة تعديل الخامة الجديدة
+async function editIngredient(id, currentName, currentUnit) {
+  let unit = prompt(`تعديل معيار الخامة (${currentName}):\n(اكتب: gram أو liter أو ml أو kg أو قطعة)`, currentUnit);
+  if (!unit) return;
+
+  let dbUnit = unit.trim();
+  if (dbUnit === "جرام") dbUnit = "gram";
+  if (dbUnit === "لتر") dbUnit = "liter";
+  if (dbUnit === "ملي") dbUnit = "ml";
+  if (dbUnit === "كيلو") dbUnit = "kg";
+  if (dbUnit === "قطعة" || dbUnit === "قطعه") dbUnit = "piece";
+
+  const validUnits = ['gram', 'kg', 'liter', 'ml', 'piece'];
+  if (!validUnits.includes(dbUnit)) {
+      alert("معيار غير صحيح! الرجاء إدخال وحدة صحيحة (gram, kg, liter, ml, piece).");
+      return;
+  }
+
+  try {
+      const { data, error } = await supabaseClient
+          .from('ingredients')
+          .update({ unit: dbUnit })
+          .eq('id', id);
+
+      if (error) throw error;
+      
+      alert("تم تعديل المعيار بنجاح!");
+      loadIngredientsCatalog(); // تحديث الجدول فوراً
+  } catch (err) {
+      alert("حدث خطأ أثناء التعديل: " + err.message);
+  }
 }
 
 async function loadIngredientStock() { 
@@ -415,7 +492,6 @@ async function loadProductStock() {
   document.getElementById("prodProductSelect").innerHTML = productsData.map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join(""); 
 }
 
-// === الدالة المحدثة لعرض المنتجات مع زرار التفعيل/الإيقاف ===
 async function loadProductsTable() { 
   const { data } = await supabaseClient.from("products").select("*").order('is_active', { ascending: false }); 
   
@@ -432,7 +508,6 @@ async function loadProductsTable() {
   `).join(""); 
 }
 
-// === الدالة الجديدة لتغيير حالة المنتج في الداتا بيز ===
 async function toggleProductStatus(event, id, currentStatus) {
   const confirmMsg = currentStatus ? "هل أنت متأكد أنك تريد إخفاء هذا المنتج من شاشة الكاشير؟" : "هل تريد إعادة تفعيل هذا المنتج؟";
   if(!confirm(confirmMsg)) return;
