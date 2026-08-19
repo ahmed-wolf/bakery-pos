@@ -424,7 +424,7 @@ document.getElementById("productSaveBtn").addEventListener("click", async () => 
   loadProductsTable();
 });
 
-// تحميل قائمة الخامات للجدول الجديد وإضافة زر التعديل
+// تحميل قائمة الخامات للجدول الجديد واستخدام الأسلوب الآمن للزرار
 async function loadIngredientsCatalog() { 
   const { data } = await supabaseClient.from("ingredients").select("*").order('id'); 
   
@@ -432,6 +432,7 @@ async function loadIngredientsCatalog() {
   document.getElementById("receiptIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
   document.getElementById("recipeIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
   
+  // تحديث جدول الخامات الجديد واستخدام الـ dataset والـ Event Listener لتجنب مشاكل الـ Quotes
   document.getElementById("ingredientsTableBody").innerHTML = data.map(i => `
     <tr class="border-b hover:bg-gray-50 transition">
       <td class="p-3 font-bold text-gray-800">${escapeHtml(i.name)}</td>
@@ -444,14 +445,15 @@ async function loadIngredientsCatalog() {
       </td>
     </tr>
   `).join("");
-  // ربط زراير تعديل الخامات بأمان
+}
+
+// تفعيل استجابة زراير تعديل الخامات بأمان تام
 document.getElementById("ingredientsTableBody").addEventListener("click", (e) => {
     const btn = e.target.closest(".edit-ing-btn");
     if (btn) {
         editIngredient(btn.dataset.id, btn.dataset.name, btn.dataset.unit);
     }
 });
-}
 
 // دالة تعديل الخامة الجديدة
 async function editIngredient(id, currentName, currentUnit) {
