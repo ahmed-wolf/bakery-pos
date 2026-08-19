@@ -432,18 +432,25 @@ async function loadIngredientsCatalog() {
   document.getElementById("receiptIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
   document.getElementById("recipeIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
   
-  // تحديث جدول الخامات الجديد في صفحة "المنتجات والخامات"
   document.getElementById("ingredientsTableBody").innerHTML = data.map(i => `
     <tr class="border-b hover:bg-gray-50 transition">
       <td class="p-3 font-bold text-gray-800">${escapeHtml(i.name)}</td>
       <td class="p-3 font-bold text-blue-600">${escapeHtml(i.unit)}</td>
       <td class="p-3">
-        <button onclick="editIngredient(${i.id}, '${escapeHtml(i.name)}', '${escapeHtml(i.unit)}')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs font-bold transition shadow-sm">
+        <button class="edit-ing-btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs font-bold transition shadow-sm"
+                data-id="${i.id}" data-name="${escapeHtml(i.name)}" data-unit="${escapeHtml(i.unit)}">
           تعديل المعيار ✏️
         </button>
       </td>
     </tr>
   `).join("");
+  // ربط زراير تعديل الخامات بأمان
+document.getElementById("ingredientsTableBody").addEventListener("click", (e) => {
+    const btn = e.target.closest(".edit-ing-btn");
+    if (btn) {
+        editIngredient(btn.dataset.id, btn.dataset.name, btn.dataset.unit);
+    }
+});
 }
 
 // دالة تعديل الخامة الجديدة
