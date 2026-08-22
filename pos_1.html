@@ -178,12 +178,13 @@
   </div>
 </div>
 
+<!-- المربع الجديد المقفول برمجياً ضد جوجل كروم -->
 <div id="adminPassModal" class="modal-overlay">
   <div class="modal-content text-black">
     <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
     <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
-    <!-- تم تغيير النوع لـ text مع كلاس secure-input لمنع تدخل جوجل كروم نهائيا -->
-    <input type="text" id="adminPassInput" class="form-input secure-input text-2xl text-center py-3 mb-4" placeholder="••••" autocomplete="off">
+    <!-- تم إضافة readonly لمنع أي تدخل خارجي وتغيير الـ id -->
+    <input type="text" id="managerCodeBox" class="form-input secure-input text-2xl text-center py-3 mb-4" placeholder="••••" readonly>
     <div class="flex gap-2">
         <button onclick="executeShiftSales()" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors">تأكيد</button>
         <button onclick="document.getElementById('adminPassModal').classList.remove('open')" class="flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">إلغاء</button>
@@ -267,7 +268,6 @@ function getMultiplier() {
 let keyboard;
 let selectedInputName = "productSearch"; 
 
-// لوحة عربي كاملة للبحث
 const layoutArabic = {
   default: [
     "ذ 1 2 3 4 5 6 7 8 9 0 - {bksp}",
@@ -278,7 +278,6 @@ const layoutArabic = {
   ]
 };
 
-// لوحة أرقام فقط للحسابات والباسورد
 const layoutNumpad = {
   default: ["1 2 3", "4 5 6", "7 8 9", ". 0 {bksp}", "{enter}"]
 };
@@ -299,8 +298,7 @@ function initKeyboard() {
 
 function setKeyboardLayout(inputId) {
     if(!keyboard) return;
-    // تحديد المربعات اللي محتاجة أرقام بس
-    const numpadInputs = ['discountPercent', 'discountAmount', 'adminPassInput', 'startShiftCashInput', 'actualCashInput'];
+    const numpadInputs = ['discountPercent', 'discountAmount', 'managerCodeBox', 'startShiftCashInput', 'actualCashInput'];
     if (numpadInputs.includes(inputId)) {
         keyboard.setOptions({ layout: layoutNumpad });
     } else {
@@ -326,7 +324,6 @@ function toggleKeyboard() {
     }
 }
 
-// دمج الكيبورد مع كل المربعات
 document.querySelectorAll('.form-input').forEach(input => {
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
@@ -345,10 +342,20 @@ document.querySelectorAll('.form-input').forEach(input => {
   });
 });
 
+// التعامل الخاص مع المربع المقفول عشان يقبل من الكيبورد بتاعنا
+document.getElementById('managerCodeBox').addEventListener('click', (e) => {
+    selectedInputName = 'managerCodeBox';
+    if(!keyboard) initKeyboard();
+    setKeyboardLayout('managerCodeBox');
+    keyboard.setInput(e.target.value);
+    document.getElementById("keyboardWrapper").classList.remove("hidden");
+});
+
 function onChange(input) {
   const el = document.getElementById(selectedInputName);
   if(el) {
       el.value = input;
+      // بنبعت Event عشان لو في بحث فوري يشتغل
       el.dispatchEvent(new Event('input', { bubbles: true })); 
   }
 }
@@ -358,7 +365,7 @@ function onKeyPress(button) {
       const el = document.getElementById(selectedInputName);
       if(el && selectedInputName === "productSearch") {
           el.dispatchEvent(new KeyboardEvent('keypress', {key: 'Enter'})); 
-      } else if (selectedInputName === "adminPassInput") {
+      } else if (selectedInputName === "managerCodeBox") {
           executeShiftSales();
       } else if (selectedInputName === "startShiftCashInput") {
           document.getElementById("confirmStartShiftBtn").click();
@@ -371,21 +378,20 @@ function onKeyPress(button) {
 
 function openShiftSalesModal() {
     document.getElementById('adminPassModal').classList.add("open");
-    const passInput = document.getElementById('adminPassInput');
+    const passInput = document.getElementById('managerCodeBox');
     passInput.value = "";
     
-    selectedInputName = 'adminPassInput';
+    selectedInputName = 'managerCodeBox';
     document.getElementById("keyboardWrapper").classList.remove("hidden");
     if(!keyboard) initKeyboard();
     
-    setKeyboardLayout('adminPassInput');
-    keyboard.setInput("");
-    passInput.focus();
+    setKeyboardLayout('managerCodeBox');
+    keyboard.clearInput(); // تفريغ الكيبورد تماماً لبداية جديدة نضيفة
 }
 // ==========================
 
 async function executeShiftSales() {
-    const pass = document.getElementById('adminPassInput').value;
+    const pass = document.getElementById('managerCodeBox').value;
     if (pass !== "2005") {
         if(pass) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
         return;
