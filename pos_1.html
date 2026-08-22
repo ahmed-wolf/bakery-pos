@@ -162,6 +162,7 @@
   </aside>
 </div>
 
+<!-- Modal تعديل الفاتورة -->
 <div id="editOrderModal" class="modal-overlay">
   <div class="modal-content text-black">
     <div class="flex justify-between items-center mb-4">
@@ -174,12 +175,12 @@
   </div>
 </div>
 
+<!-- المربع الجديد المتصلح -->
 <div id="adminPassModal" class="modal-overlay">
   <div class="modal-content text-black">
     <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
     <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
     
-    <!-- الخدعة السحرية: مربع شفاف تماماً بياخد الكتابة الحقيقية، وتحته رسمة بتعرض النقط -->
     <div class="relative w-full h-14 mb-4 bg-white border border-gray-300 rounded-lg">
         <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span id="fakeDotsDisplay" class="text-gray-400 text-lg">••••</span>
@@ -328,7 +329,7 @@ function toggleKeyboard() {
 
 function updateFakeDots(val) {
     const display = document.getElementById("fakeDotsDisplay");
-    if (val.length > 0) {
+    if (val && val.length > 0) {
         display.textContent = '•'.repeat(val.length);
         display.className = "text-gray-900 text-3xl tracking-[0.3em]"; 
     } else {
