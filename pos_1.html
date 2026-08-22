@@ -179,8 +179,13 @@
     <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
     <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
     
-    <!-- الحل الذكي: Input عادي من نوع Text عشان كيبورد اللاب يشتغل، بس بـ CSS يخفي النقط، وباسم مختلف تماما يضلل المتصفح -->
-    <input type="text" id="x_auth_check_55" class="form-input text-3xl text-center py-3 mb-4" placeholder="••••" autocomplete="off" spellcheck="false" style="-webkit-text-security: disc;">
+    <!-- الخدعة السحرية: مربع شفاف تماماً بياخد الكتابة الحقيقية، وتحته رسمة بتعرض النقط -->
+    <div class="relative w-full h-14 mb-4 bg-white border border-gray-300 rounded-lg">
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span id="fakeDotsDisplay" class="text-gray-400 text-lg">••••</span>
+        </div>
+        <input type="text" id="managerCodeBox" class="form-input absolute top-0 left-0 w-full h-full opacity-0 cursor-text p-0 m-0 border-0" autocomplete="off" inputmode="numeric">
+    </div>
     
     <div class="flex gap-2">
         <button onclick="executeShiftSales()" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors">تأكيد</button>
@@ -295,7 +300,7 @@ function initKeyboard() {
 
 function setKeyboardLayout(inputId) {
     if(!keyboard) return;
-    const numpadInputs = ['discountPercent', 'discountAmount', 'x_auth_check_55', 'startShiftCashInput', 'actualCashInput'];
+    const numpadInputs = ['discountPercent', 'discountAmount', 'managerCodeBox', 'startShiftCashInput', 'actualCashInput'];
     if (numpadInputs.includes(inputId)) {
         keyboard.setOptions({ layout: layoutNumpad });
     } else {
@@ -321,6 +326,17 @@ function toggleKeyboard() {
     }
 }
 
+function updateFakeDots(val) {
+    const display = document.getElementById("fakeDotsDisplay");
+    if (val.length > 0) {
+        display.textContent = '•'.repeat(val.length);
+        display.className = "text-gray-900 text-3xl tracking-[0.3em]"; 
+    } else {
+        display.textContent = '••••';
+        display.className = "text-gray-400 text-lg tracking-normal"; 
+    }
+}
+
 document.querySelectorAll('.form-input').forEach(input => {
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
@@ -335,6 +351,9 @@ document.querySelectorAll('.form-input').forEach(input => {
          if (keyboard.getInput() !== e.target.value) {
              keyboard.setInput(e.target.value);
          }
+     }
+     if (e.target.id === 'managerCodeBox') {
+         updateFakeDots(e.target.value);
      }
   });
 });
@@ -352,7 +371,7 @@ function onKeyPress(button) {
       const el = document.getElementById(selectedInputName);
       if(el && selectedInputName === "productSearch") {
           el.dispatchEvent(new KeyboardEvent('keypress', {key: 'Enter'})); 
-      } else if (selectedInputName === "x_auth_check_55") {
+      } else if (selectedInputName === "managerCodeBox") {
           executeShiftSales();
       } else if (selectedInputName === "startShiftCashInput") {
           document.getElementById("confirmStartShiftBtn").click();
@@ -365,17 +384,18 @@ function onKeyPress(button) {
 
 function openShiftSalesModal() {
     document.getElementById('adminPassModal').classList.add("open");
-    const passBox = document.getElementById('x_auth_check_55');
+    const passBox = document.getElementById('managerCodeBox');
     
     passBox.value = "";
+    updateFakeDots("");
     
-    selectedInputName = 'x_auth_check_55';
+    selectedInputName = 'managerCodeBox';
     document.getElementById("keyboardWrapper").classList.remove("hidden");
     if(!keyboard) initKeyboard();
     
-    setKeyboardLayout('x_auth_check_55');
+    setKeyboardLayout('managerCodeBox');
     keyboard.clearInput();
-    passBox.focus(); // نقل المؤشر للمربع عشان لو الكاشير كتب من كيبورد اللاب توب
+    passBox.focus(); 
 }
 
 function closeAdminModal() {
@@ -386,7 +406,7 @@ function closeAdminModal() {
 // ==========================
 
 async function executeShiftSales() {
-    const pass = document.getElementById('x_auth_check_55').value;
+    const pass = document.getElementById('managerCodeBox').value;
     if (pass !== "2005") {
         if(pass) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
         return;
