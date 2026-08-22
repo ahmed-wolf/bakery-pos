@@ -2,17 +2,27 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>تسجيل الدخول | مخبز العائلة</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<!-- مكتبة الكيبورد التاتش -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/css/index.css">
+<script src="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/index.js"></script>
+
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root { --cream: #F6EEDD; --paper: #FFFDF8; --crust: #3D2B1F; --ink: #2B2118; --honey: #C98A3D; --brick: #A8453A; --border: rgba(61,43,31,0.12); }
-  body { font-family: 'Tajawal', sans-serif; background: var(--crust); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .login-card { background: var(--cream); border-radius: 24px; width: 380px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); overflow: hidden; }
+  body { font-family: 'Tajawal', sans-serif; background: var(--crust); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; overscroll-behavior: none; }
+  .login-card { background: var(--cream); border-radius: 24px; width: 380px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); overflow: hidden; position: relative; z-index: 10; margin-bottom: 20px; }
   .form-input { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 15px; font-weight: bold; }
   .form-input:focus { outline: 2px solid var(--honey); }
+  
+  /* ستايل الكيبورد */
+  #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); transition: transform 0.3s ease-in-out; transform: translateY(100%); }
+  #keyboardWrapper.show { transform: translateY(0); }
+  .simple-keyboard { color: #000; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -35,6 +45,15 @@
   </form>
 </div>
 
+<!-- حاوية الكيبورد -->
+<div id="keyboardWrapper">
+    <div class="flex justify-between mb-2">
+        <span class="text-sm font-bold text-gray-700 px-2">لوحة الأرقام (كلمة المرور)</span>
+        <button type="button" onclick="closeKeyboard()" class="text-red-500 font-bold text-sm bg-white px-3 py-1 rounded">إغلاق ✕</button>
+    </div>
+    <div class="simple-keyboard" dir="ltr"></div>
+</div>
+
 <script>
 const supabaseClient = supabase.createClient("https://rjhsjekwixavydzkghqt.supabase.co", "sb_publishable_lHjuLBBq_tr59ziXYvFSag_UMPkGMkj");
 
@@ -51,11 +70,52 @@ async function loadStaffList() {
 }
 loadStaffList();
 
+// === إعدادات الكيبورد التاتش ===
+let keyboard;
+const passwordInput = document.getElementById("loginPassword");
+const kbWrapper = document.getElementById("keyboardWrapper");
+
+function initKeyboard() {
+  keyboard = new window.SimpleKeyboard.default({
+    onChange: input => onChange(input),
+    onKeyPress: button => onKeyPress(button),
+    // خلينها أرقام بس عشان تناسب الباسورد وتبقى سهلة للكاشير
+    layout: {
+      default: ["1 2 3", "4 5 6", "7 8 9", "{bksp} 0 {enter}"]
+    },
+    display: {
+        '{bksp}': 'مسح ⌫',
+        '{enter}': 'تأكيد ↵'
+    }
+  });
+}
+
+function onChange(input) {
+  passwordInput.value = input;
+}
+
+function onKeyPress(button) {
+  if (button === "{enter}") {
+      closeKeyboard();
+  }
+}
+
+function closeKeyboard() {
+    kbWrapper.classList.remove("show");
+}
+
+passwordInput.addEventListener("focus", () => {
+    kbWrapper.classList.add("show");
+    if(!keyboard) initKeyboard();
+    if(keyboard) keyboard.setInput(passwordInput.value);
+});
+// ==============================
+
 // تسجيل الدخول الذكي
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = document.getElementById("loginEmail").value;
-  const rawPassword = document.getElementById("loginPassword").value;
+  const rawPassword = passwordInput.value;
   
   if(!email) { alert("من فضلك اختر اسم المستخدم من القائمة!"); return; }
 
