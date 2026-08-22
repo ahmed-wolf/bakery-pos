@@ -22,9 +22,6 @@
   .product-card:active { transform: scale(0.92); box-shadow: none; }
   
   .form-input { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: bold; }
-  
-  /* كود التشفير السري لمنع تدخل جوجل كروم في الباسورد */
-  .secure-input { -webkit-text-security: disc; font-family: text-security-disc, 'Tajawal', sans-serif; }
 
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
   .modal-overlay.open { display: flex; }
@@ -178,16 +175,18 @@
   </div>
 </div>
 
-<!-- المربع الجديد المقفول برمجياً ضد جوجل كروم -->
+<!-- الحل النووي: المربع الجديد المقفول برمجياً كـ Div لمنع جوجل كروم نهائياً -->
 <div id="adminPassModal" class="modal-overlay">
   <div class="modal-content text-black">
     <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
     <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
-    <!-- تم إضافة readonly لمنع أي تدخل خارجي وتغيير الـ id -->
-    <input type="text" id="managerCodeBox" class="form-input secure-input text-2xl text-center py-3 mb-4" placeholder="••••" readonly>
+    
+    <!-- خليناه div عشان المتصفح ميتعرفش عليه، وهنبرمج النقط بالجافاسكريبت -->
+    <div id="managerCodeBox" class="form-input text-3xl text-center py-3 mb-4 h-14 flex items-center justify-center cursor-pointer bg-white text-gray-900 border-gray-300" data-real-pass=""></div>
+    
     <div class="flex gap-2">
         <button onclick="executeShiftSales()" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors">تأكيد</button>
-        <button onclick="document.getElementById('adminPassModal').classList.remove('open')" class="flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">إلغاء</button>
+        <button onclick="closeAdminModal()" class="flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">إلغاء</button>
     </div>
   </div>
 </div>
@@ -314,9 +313,10 @@ function toggleKeyboard() {
         if(selectedInputName) {
             const el = document.getElementById(selectedInputName);
             if(el) {
-                el.focus();
+                // تجنب التحديد لو هو الـ div
+                if(el.tagName !== 'DIV') el.focus();
                 setKeyboardLayout(selectedInputName);
-                keyboard.setInput(el.value);
+                keyboard.setInput(el.dataset.realPass !== undefined ? el.dataset.realPass : el.value);
             }
         }
     } else {
@@ -325,6 +325,7 @@ function toggleKeyboard() {
 }
 
 document.querySelectorAll('.form-input').forEach(input => {
+  if (input.tagName === 'DIV') return; // هنتعامل معاه لوحده
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
     if(!keyboard) initKeyboard();
@@ -342,21 +343,26 @@ document.querySelectorAll('.form-input').forEach(input => {
   });
 });
 
-// التعامل الخاص مع المربع المقفول عشان يقبل من الكيبورد بتاعنا
+// الحدث الخاص للمربع السري عشان يظهر الكيبورد
 document.getElementById('managerCodeBox').addEventListener('click', (e) => {
     selectedInputName = 'managerCodeBox';
     if(!keyboard) initKeyboard();
     setKeyboardLayout('managerCodeBox');
-    keyboard.setInput(e.target.value);
     document.getElementById("keyboardWrapper").classList.remove("hidden");
 });
 
 function onChange(input) {
   const el = document.getElementById(selectedInputName);
   if(el) {
-      el.value = input;
-      // بنبعت Event عشان لو في بحث فوري يشتغل
-      el.dispatchEvent(new Event('input', { bubbles: true })); 
+      if (selectedInputName === 'managerCodeBox') {
+          // برمجة التشفير الوهمي: نحول الكلام لنقط
+          el.innerText = '•'.repeat(input.length);
+          // نحفظ الباسورد الحقيقي ورا الكواليس
+          el.dataset.realPass = input;
+      } else {
+          el.value = input;
+          el.dispatchEvent(new Event('input', { bubbles: true })); 
+      }
   }
 }
 
@@ -378,27 +384,36 @@ function onKeyPress(button) {
 
 function openShiftSalesModal() {
     document.getElementById('adminPassModal').classList.add("open");
-    const passInput = document.getElementById('managerCodeBox');
-    passInput.value = "";
+    const passBox = document.getElementById('managerCodeBox');
+    
+    // تصفير المربع تماما
+    passBox.innerText = "";
+    passBox.dataset.realPass = "";
     
     selectedInputName = 'managerCodeBox';
     document.getElementById("keyboardWrapper").classList.remove("hidden");
     if(!keyboard) initKeyboard();
     
     setKeyboardLayout('managerCodeBox');
-    keyboard.clearInput(); // تفريغ الكيبورد تماماً لبداية جديدة نضيفة
+    keyboard.clearInput();
+}
+
+function closeAdminModal() {
+    document.getElementById('adminPassModal').classList.remove("open");
+    document.getElementById("keyboardWrapper").classList.add("hidden");
+    if (keyboard) keyboard.clearInput();
 }
 // ==========================
 
 async function executeShiftSales() {
-    const pass = document.getElementById('managerCodeBox').value;
+    // بناخد الباسورد الحقيقي من ورا الكواليس
+    const pass = document.getElementById('managerCodeBox').dataset.realPass || "";
     if (pass !== "2005") {
         if(pass) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
         return;
     }
     
-    document.getElementById('adminPassModal').classList.remove("open");
-    document.getElementById("keyboardWrapper").classList.add("hidden");
+    closeAdminModal();
     
     try {
         const { data: orders } = await supabaseClient.from("orders")
