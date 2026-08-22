@@ -175,17 +175,15 @@
   </div>
 </div>
 
-<!-- المربع الجديد المتصلح -->
+<!-- الحل الصاروخي ضد جوجل كروم (Div ATM Style) -->
 <div id="adminPassModal" class="modal-overlay">
   <div class="modal-content text-black">
     <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
     <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
     
-    <div class="relative w-full h-14 mb-4 bg-white border border-gray-300 rounded-lg">
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span id="fakeDotsDisplay" class="text-gray-400 text-lg">••••</span>
-        </div>
-        <input type="text" id="managerCodeBox" class="form-input absolute top-0 left-0 w-full h-full opacity-0 cursor-text p-0 m-0 border-0" autocomplete="off" inputmode="numeric">
+    <!-- مفيش أي input هنا خالص، ده Div عادي بيستقبل كيبورد اللاب والتاتش مع بعض -->
+    <div id="managerCodeBox" tabindex="0" class="form-input text-3xl text-center py-3 mb-4 h-14 flex items-center justify-center cursor-pointer bg-white border border-gray-300 rounded-lg select-none outline-none focus:ring-2 focus:ring-teal-500">
+        <span id="fakeDotsDisplay" class="text-gray-400 text-lg">••••</span>
     </div>
     
     <div class="flex gap-2">
@@ -319,13 +317,20 @@ function toggleKeyboard() {
             if(el) {
                 el.focus();
                 setKeyboardLayout(selectedInputName);
-                keyboard.setInput(el.value);
+                if (selectedInputName !== 'managerCodeBox') {
+                    keyboard.setInput(el.value);
+                } else {
+                    keyboard.setInput(managerPassString);
+                }
             }
         }
     } else {
         kb.classList.add("hidden");
     }
 }
+
+// === برمجة مربع الجرد السري (ATM Style) ===
+let managerPassString = "";
 
 function updateFakeDots(val) {
     const display = document.getElementById("fakeDotsDisplay");
@@ -338,7 +343,46 @@ function updateFakeDots(val) {
     }
 }
 
+const managerBox = document.getElementById("managerCodeBox");
+
+managerBox.addEventListener("click", () => {
+    managerBox.focus();
+});
+
+managerBox.addEventListener("focus", () => {
+    selectedInputName = 'managerCodeBox';
+    document.getElementById("keyboardWrapper").classList.remove("hidden");
+    if(!keyboard) initKeyboard();
+    setKeyboardLayout('managerCodeBox');
+    keyboard.setInput(managerPassString);
+});
+
+// اللاب توب بيكتب هنا مباشرة في الـ DIV
+managerBox.addEventListener("keydown", (e) => {
+    if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        managerPassString += e.key;
+        updateFakeDots(managerPassString);
+        if (keyboard && selectedInputName === 'managerCodeBox') {
+            keyboard.setInput(managerPassString);
+        }
+    } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        managerPassString = managerPassString.slice(0, -1);
+        updateFakeDots(managerPassString);
+        if (keyboard && selectedInputName === 'managerCodeBox') {
+            keyboard.setInput(managerPassString);
+        }
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        executeShiftSales();
+    }
+});
+
+// معالجة كل مربعات الإدخال العادية (Inputs)
 document.querySelectorAll('.form-input').forEach(input => {
+  if (input.id === 'managerCodeBox') return; // بنتجاهل مربع الجرد لأنه اتبرمج فوق
+
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
     if(!keyboard) initKeyboard();
@@ -353,24 +397,27 @@ document.querySelectorAll('.form-input').forEach(input => {
              keyboard.setInput(e.target.value);
          }
      }
-     if (e.target.id === 'managerCodeBox') {
-         updateFakeDots(e.target.value);
-     }
   });
 });
 
+// التاتش بيكتب هنا
 function onChange(input) {
-  const el = document.getElementById(selectedInputName);
-  if(el) {
-      el.value = input;
-      el.dispatchEvent(new Event('input', { bubbles: true })); 
+  if (selectedInputName === 'managerCodeBox') {
+      managerPassString = input;
+      updateFakeDots(managerPassString);
+  } else {
+      const el = document.getElementById(selectedInputName);
+      if(el) {
+          el.value = input;
+          el.dispatchEvent(new Event('input', { bubbles: true })); 
+      }
   }
 }
 
 function onKeyPress(button) {
   if (button === "{enter}") {
-      const el = document.getElementById(selectedInputName);
-      if(el && selectedInputName === "productSearch") {
+      if (selectedInputName === "productSearch") {
+          const el = document.getElementById(selectedInputName);
           el.dispatchEvent(new KeyboardEvent('keypress', {key: 'Enter'})); 
       } else if (selectedInputName === "managerCodeBox") {
           executeShiftSales();
@@ -385,9 +432,7 @@ function onKeyPress(button) {
 
 function openShiftSalesModal() {
     document.getElementById('adminPassModal').classList.add("open");
-    const passBox = document.getElementById('managerCodeBox');
-    
-    passBox.value = "";
+    managerPassString = "";
     updateFakeDots("");
     
     selectedInputName = 'managerCodeBox';
@@ -396,20 +441,25 @@ function openShiftSalesModal() {
     
     setKeyboardLayout('managerCodeBox');
     keyboard.clearInput();
-    passBox.focus(); 
+    
+    // تركيز على الـ DIV عشان كيبورد اللاب يشتغل فوراً
+    document.getElementById('managerCodeBox').focus();
 }
 
 function closeAdminModal() {
     document.getElementById('adminPassModal').classList.remove("open");
     document.getElementById("keyboardWrapper").classList.add("hidden");
     if (keyboard) keyboard.clearInput();
+    managerPassString = "";
 }
 // ==========================
 
 async function executeShiftSales() {
-    const pass = document.getElementById('managerCodeBox').value;
-    if (pass !== "2005") {
-        if(pass) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
+    if (managerPassString !== "2005") {
+        if(managerPassString) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
+        managerPassString = "";
+        updateFakeDots("");
+        if(keyboard) keyboard.clearInput();
         return;
     }
     
