@@ -23,6 +23,9 @@
   #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); transition: transform 0.3s ease-in-out; transform: translateY(100%); }
   #keyboardWrapper.show { transform: translateY(0); }
   .simple-keyboard { color: #000; font-weight: bold; }
+  
+  /* تشفير الباسورد عشان كروم ميتدخلش نهائيا */
+  .secure-input { -webkit-text-security: disc; font-family: text-security-disc, 'Tajawal', sans-serif; }
 </style>
 </head>
 <body>
@@ -38,10 +41,11 @@
     </select>
 
     <label class="block text-xs font-bold mb-2" style="color: var(--ink);">كلمة المرور</label>
-    <input id="loginPassword" type="password" required class="form-input mb-2" placeholder="••••">
+    <!-- تم تغيير النوع لـ text مع إخفاء بنظام CSS لمنع Autofill -->
+    <input id="loginPassword" type="text" required class="form-input mb-2 secure-input" placeholder="••••" autocomplete="off" spellcheck="false">
 
     <p id="loginErrorMsg" class="text-xs font-bold mb-2 hidden text-center" style="color: var(--brick);"></p>
-    <button type="submit" class="w-full py-3.5 rounded-xl font-bold text-sm mt-4 transition-colors" style="background: var(--honey); color: #2A1400;">دخول</button>
+    <button type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-bold text-sm mt-4 transition-colors" style="background: var(--honey); color: #2A1400;">دخول</button>
   </form>
 </div>
 
@@ -70,16 +74,16 @@ async function loadStaffList() {
 }
 loadStaffList();
 
-// === إعدادات الكيبورد التاتش ===
+// === إعدادات الكيبورد التاتش (بالطريقة الصح اللي إنت استنتجتها) ===
 let keyboard;
 const passwordInput = document.getElementById("loginPassword");
 const kbWrapper = document.getElementById("keyboardWrapper");
+let passString = ""; // المصدر الوحيد للباسورد
 
 function initKeyboard() {
   keyboard = new window.SimpleKeyboard.default({
     onChange: input => onChange(input),
     onKeyPress: button => onKeyPress(button),
-    // خلينها أرقام بس عشان تناسب الباسورد وتبقى سهلة للكاشير
     layout: {
       default: ["1 2 3", "4 5 6", "7 8 9", "{bksp} 0 {enter}"]
     },
@@ -90,14 +94,23 @@ function initKeyboard() {
   });
 }
 
+// قفلنا الـ onChange خالص عشان نتجنب الـ Buffer الداخلي للمكتبة
 function onChange(input) {
-  passwordInput.value = input;
+    return;
 }
 
+// الاعتماد بالكامل على ضغطات الزراير
 function onKeyPress(button) {
-  if (button === "{enter}") {
+  if (button === '{bksp}') {
+      passString = passString.slice(0, -1);
+  } else if (button === '{enter}') {
       closeKeyboard();
+      document.getElementById("submitBtn").click(); // تفعيل زرار الدخول
+      return;
+  } else if (/^[0-9]$/.test(button)) {
+      passString += button;
   }
+  passwordInput.value = passString;
 }
 
 function closeKeyboard() {
@@ -107,7 +120,24 @@ function closeKeyboard() {
 passwordInput.addEventListener("focus", () => {
     kbWrapper.classList.add("show");
     if(!keyboard) initKeyboard();
-    if(keyboard) keyboard.setInput(passwordInput.value);
+});
+
+// اللاب توب بيكتب هنا مباشرة وبيحدث نفس المتغير بدون تضارب
+passwordInput.addEventListener("keydown", (e) => {
+    if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        passString += e.key;
+        passwordInput.value = passString;
+    } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        passString = passString.slice(0, -1);
+        passwordInput.value = passString;
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById("submitBtn").click();
+    } else if (e.key !== 'Tab') {
+        e.preventDefault(); // منع أي حروف تانية
+    }
 });
 // ==============================
 
@@ -115,20 +145,23 @@ passwordInput.addEventListener("focus", () => {
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = document.getElementById("loginEmail").value;
-  const rawPassword = passwordInput.value;
+  // بناخد الباسورد من المتغير اللي إحنا متحكمين فيه 100% مش من المربع
+  const rawPassword = passString; 
   
   if(!email) { alert("من فضلك اختر اسم المستخدم من القائمة!"); return; }
+  if(!rawPassword) { alert("من فضلك اكتب كلمة المرور!"); return; }
 
   const errorMsg = document.getElementById("loginErrorMsg");
   errorMsg.classList.add("hidden");
+  
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true; btn.textContent = "جاري الدخول...";
 
-  // التجربة الأولى: نجرب الباسورد بالطريقة الجديدة (بإضافة الكلمة السرية للحسابات الجديدة)
   let { data, error } = await supabaseClient.auth.signInWithPassword({ 
     email, 
     password: rawPassword + "-bakery" 
   });
   
-  // التجربة التانية: لو فشل، نجرب الباسورد زي ما كتبته بالظبط (عشان حسابك القديم يفتح)
   if (error) {
     const fallback = await supabaseClient.auth.signInWithPassword({ 
       email, 
@@ -138,14 +171,17 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     error = fallback.error;
   }
   
-  // لو فضل غلط في الحالتين، نطلع رسالة الخطأ
   if (error) {
     errorMsg.textContent = "كلمة المرور غير صحيحة!";
     errorMsg.classList.remove("hidden");
+    btn.disabled = false; btn.textContent = "دخول";
+    
+    // تصفير الباسورد عشان يكتب من جديد
+    passString = "";
+    passwordInput.value = "";
     return;
   }
   
-  // لو تمام، نشوف صلاحيته ونوجهه للصفحة الصح
   const { data: staff } = await supabaseClient.from("staff").select("role").eq("id", data.user.id).single();
   if (staff && staff.role === "cashier") {
     window.location.href = "pos_1.html";
