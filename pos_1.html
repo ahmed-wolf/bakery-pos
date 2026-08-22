@@ -23,6 +23,9 @@
   
   .form-input { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: bold; }
   
+  /* كود التشفير السري لمنع تدخل جوجل كروم في الباسورد */
+  .secure-input { -webkit-text-security: disc; font-family: text-security-disc, 'Tajawal', sans-serif; }
+
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
   .modal-overlay.open { display: flex; }
   .modal-content { background: var(--cream); border-radius: 16px; padding: 20px; width: 400px; max-width: 90%; }
@@ -135,8 +138,8 @@
     <div class="p-4 flex-1 overflow-y-auto" id="cartList"></div>
     
     <div class="p-4" style="background: rgba(255,255,255,0.05);">
-      <input type="text" id="customerName" placeholder="👤 اسم العميل (اختياري)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base">
-      <input type="text" id="orderNotes" placeholder="📝 ملاحظات (مثال: خصم ضيافة)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base">
+      <input type="text" id="customerName" placeholder="👤 اسم العميل (اختياري)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
+      <input type="text" id="orderNotes" placeholder="📝 ملاحظات (مثال: خصم ضيافة)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
       
       <div class="flex gap-2 mb-2">
         <div class="flex-1">
@@ -170,18 +173,17 @@
         <button onclick="closeEditOrderModal()" class="text-gray-500 font-bold hover:text-red-500 text-xl">✕</button>
     </div>
     <p class="text-sm text-gray-600 mb-4">اكتب رقم الفاتورة (مثال: R-123456789) لاسترجاعها للسلة والتعديل عليها.</p>
-    <input type="text" id="searchReceiptInput" class="form-input text-center text-lg py-3 mb-4" placeholder="رقم الفاتورة...">
+    <input type="text" id="searchReceiptInput" class="form-input text-center text-lg py-3 mb-4" placeholder="رقم الفاتورة..." autocomplete="off">
     <button id="searchOrderBtn" onclick="searchOrderForEdit()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors">بحث واسترجاع للسلة</button>
   </div>
 </div>
 
-<!-- Modal الجرد السري (الجديد عشان الكيبورد يشتغل عليه) -->
 <div id="adminPassModal" class="modal-overlay">
   <div class="modal-content text-black">
     <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
     <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
-    <!-- تم إضافة الكلاس form-input عشان يفتح الكيبورد التاتش تلقائي -->
-    <input type="password" id="adminPassInput" class="form-input text-2xl text-center py-3 mb-4" placeholder="••••">
+    <!-- تم تغيير النوع لـ text مع كلاس secure-input لمنع تدخل جوجل كروم نهائيا -->
+    <input type="text" id="adminPassInput" class="form-input secure-input text-2xl text-center py-3 mb-4" placeholder="••••" autocomplete="off">
     <div class="flex gap-2">
         <button onclick="executeShiftSales()" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors">تأكيد</button>
         <button onclick="document.getElementById('adminPassModal').classList.remove('open')" class="flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">إلغاء</button>
@@ -214,11 +216,11 @@
   <div class="modal-content text-black" style="text-align: right;">
     <h3 class="font-bold text-xl mb-4" style="margin-top:0;">إعدادات الفاتورة واللوجو</h3>
     <label class="font-bold text-sm">اسم المخبز:</label><br>
-    <input type="text" id="bakeryNameEn" placeholder="مثال: Family Bakery" class="form-input mb-3"><br>
+    <input type="text" id="bakeryNameEn" placeholder="مثال: Family Bakery" class="form-input mb-3" autocomplete="off"><br>
     <label class="font-bold text-sm">رابط صورة اللوجو (URL):</label><br>
-    <input type="text" id="bakeryLogoUrl" placeholder="رابط صورة اللوجو (اختياري)" class="form-input mb-3"><br>
+    <input type="text" id="bakeryLogoUrl" placeholder="رابط صورة اللوجو (اختياري)" class="form-input mb-3" autocomplete="off"><br>
     <label class="font-bold text-sm">رسالة الترحيب أسفل الفاتورة:</label><br>
-    <input type="text" id="welcomeMessage" placeholder="شكراً لزيارتكم" class="form-input mb-4"><br>
+    <input type="text" id="welcomeMessage" placeholder="شكراً لزيارتكم" class="form-input mb-4" autocomplete="off"><br>
     <div class="flex gap-2">
         <button onclick="saveReceiptSettings()" class="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold">حفظ</button>
         <button onclick="closeReceiptSettings()" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold">إلغاء</button>
@@ -261,29 +263,49 @@ function getMultiplier() {
   return (isNaN(val) || val <= 0) ? 1 : val; 
 }
 
+// === إعدادات الكيبورد الذكي ===
 let keyboard;
 let selectedInputName = "productSearch"; 
+
+// لوحة عربي كاملة للبحث
+const layoutArabic = {
+  default: [
+    "ذ 1 2 3 4 5 6 7 8 9 0 - {bksp}",
+    "ض ص ث ق ف غ ع ه خ ح ج د",
+    "ش س ي ب ل ا ت ن م ك ط {enter}",
+    "ئ ء ؤ ر لا ى ة و ز ظ .",
+    "{space}"
+  ]
+};
+
+// لوحة أرقام فقط للحسابات والباسورد
+const layoutNumpad = {
+  default: ["1 2 3", "4 5 6", "7 8 9", ". 0 {bksp}", "{enter}"]
+};
 
 function initKeyboard() {
   keyboard = new window.SimpleKeyboard.default({
     onChange: input => onChange(input),
     onKeyPress: button => onKeyPress(button),
-    layout: {
-      default: [
-        "ذ 1 2 3 4 5 6 7 8 9 0 - {bksp}",
-        "ض ص ث ق ف غ ع ه خ ح ج د",
-        "ش س ي ب ل ا ت ن م ك ط {enter}",
-        "ئ ء ؤ ر لا ى ة و ز ظ .",
-        "{space}"
-      ]
-    },
+    layout: layoutArabic,
     display: {
         '{bksp}': 'مسح ⌫',
-        '{enter}': 'بحث / إدخال ↵',
+        '{enter}': 'تأكيد ↵',
         '{space}': 'مسافة'
     },
     rtl: true
   });
+}
+
+function setKeyboardLayout(inputId) {
+    if(!keyboard) return;
+    // تحديد المربعات اللي محتاجة أرقام بس
+    const numpadInputs = ['discountPercent', 'discountAmount', 'adminPassInput', 'startShiftCashInput', 'actualCashInput'];
+    if (numpadInputs.includes(inputId)) {
+        keyboard.setOptions({ layout: layoutNumpad });
+    } else {
+        keyboard.setOptions({ layout: layoutArabic });
+    }
 }
 
 function toggleKeyboard() {
@@ -292,18 +314,34 @@ function toggleKeyboard() {
         kb.classList.remove("hidden");
         if(!keyboard) initKeyboard();
         if(selectedInputName) {
-            document.getElementById(selectedInputName).focus();
-            if(keyboard) keyboard.setInput(document.getElementById(selectedInputName).value);
+            const el = document.getElementById(selectedInputName);
+            if(el) {
+                el.focus();
+                setKeyboardLayout(selectedInputName);
+                keyboard.setInput(el.value);
+            }
         }
     } else {
         kb.classList.add("hidden");
     }
 }
 
+// دمج الكيبورد مع كل المربعات
 document.querySelectorAll('.form-input').forEach(input => {
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
-    if (keyboard) keyboard.setInput(e.target.value);
+    if(!keyboard) initKeyboard();
+    setKeyboardLayout(selectedInputName);
+    keyboard.setInput(e.target.value);
+    document.getElementById("keyboardWrapper").classList.remove("hidden");
+  });
+
+  input.addEventListener("input", (e) => {
+     if (keyboard && selectedInputName === e.target.id) {
+         if (keyboard.getInput() !== e.target.value) {
+             keyboard.setInput(e.target.value);
+         }
+     }
   });
 });
 
@@ -311,7 +349,7 @@ function onChange(input) {
   const el = document.getElementById(selectedInputName);
   if(el) {
       el.value = input;
-      el.dispatchEvent(new Event('input')); 
+      el.dispatchEvent(new Event('input', { bubbles: true })); 
   }
 }
 
@@ -320,29 +358,32 @@ function onKeyPress(button) {
       const el = document.getElementById(selectedInputName);
       if(el && selectedInputName === "productSearch") {
           el.dispatchEvent(new KeyboardEvent('keypress', {key: 'Enter'})); 
+      } else if (selectedInputName === "adminPassInput") {
+          executeShiftSales();
+      } else if (selectedInputName === "startShiftCashInput") {
+          document.getElementById("confirmStartShiftBtn").click();
+      } else if (selectedInputName === "actualCashInput") {
+          document.getElementById("confirmEndShiftBtn").click();
       }
-      toggleKeyboard(); 
+      document.getElementById("keyboardWrapper").classList.add("hidden");
   }
 }
 
-// دالة فتح مودال الجرد السري
 function openShiftSalesModal() {
     document.getElementById('adminPassModal').classList.add("open");
     const passInput = document.getElementById('adminPassInput');
     passInput.value = "";
     
-    // إجبار الكيبورد يفتح على مربع الباسورد
     selectedInputName = 'adminPassInput';
-    if(keyboard) keyboard.setInput("");
-    passInput.focus();
-    
-    // إظهار الكيبورد تلقائي
-    const kb = document.getElementById("keyboardWrapper");
-    kb.classList.remove("hidden");
+    document.getElementById("keyboardWrapper").classList.remove("hidden");
     if(!keyboard) initKeyboard();
+    
+    setKeyboardLayout('adminPassInput');
+    keyboard.setInput("");
+    passInput.focus();
 }
+// ==========================
 
-// دالة تنفيذ الجرد بعد ما يكتب الباسورد بالكيبورد ويدوس تأكيد
 async function executeShiftSales() {
     const pass = document.getElementById('adminPassInput').value;
     if (pass !== "2005") {
@@ -350,8 +391,8 @@ async function executeShiftSales() {
         return;
     }
     
-    // نقفل المودال الأول
     document.getElementById('adminPassModal').classList.remove("open");
+    document.getElementById("keyboardWrapper").classList.add("hidden");
     
     try {
         const { data: orders } = await supabaseClient.from("orders")
@@ -431,6 +472,7 @@ document.getElementById("confirmStartShiftBtn").addEventListener("click", async 
 
   CURRENT_SHIFT = data;
   document.getElementById("startShiftModal").classList.remove("open");
+  document.getElementById("keyboardWrapper").classList.add("hidden");
   await loadProducts();
 });
 
@@ -638,10 +680,12 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
 function openEditOrderModal() {
     document.getElementById('editOrderModal').classList.add("open");
     document.getElementById('searchReceiptInput').value = "";
+    document.getElementById('searchReceiptInput').focus();
 }
 
 function closeEditOrderModal() {
     document.getElementById('editOrderModal').classList.remove("open");
+    document.getElementById('keyboardWrapper').classList.add("hidden");
 }
 
 async function searchOrderForEdit() {
