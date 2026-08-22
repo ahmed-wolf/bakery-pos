@@ -18,7 +18,6 @@
   .font-display { font-family: 'Cairo', sans-serif; }
   ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: var(--honey); border-radius: 8px; }
   
-  /* حركة لمس الكروت */
   .product-card { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; }
   .product-card:active { transform: scale(0.92); box-shadow: none; }
   
@@ -28,7 +27,6 @@
   .modal-overlay.open { display: flex; }
   .modal-content { background: var(--cream); border-radius: 16px; padding: 20px; width: 400px; max-width: 90%; }
   
-  /* ستايل الكيبورد */
   #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); }
   .simple-keyboard { color: #000; font-weight: bold; }
   
@@ -75,7 +73,7 @@
     <button onclick="toggleKeyboard()" class="bg-purple-600 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-purple-700 transition">
         ⌨️ كيبورد
     </button>
-    <button onclick="checkShiftSales()" class="bg-teal-600 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-teal-700 transition">
+    <button onclick="openShiftSalesModal()" class="bg-teal-600 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-teal-700 transition">
         👁️ جرد
     </button>
     <button onclick="openEditOrderModal()" class="bg-indigo-600 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-indigo-700 transition">
@@ -100,7 +98,6 @@
 <div class="flex-1 flex overflow-hidden">
   
   <main class="flex-1 flex flex-col p-4 border-l border-gray-300 relative">
-    <!-- كبرنا مربع البحث عشان يبقى واضح -->
     <input type="text" id="productSearch" placeholder="🔍 ابحث عن منتج أو باركود..." class="form-input mb-4 p-4 text-xl">
     <div id="categoryTabs" class="flex gap-2 overflow-x-auto mb-4 pb-2"></div>
     <div id="productGrid" class="flex-1 overflow-y-auto grid grid-cols-3 md:grid-cols-4 gap-4 content-start"></div>
@@ -178,6 +175,20 @@
   </div>
 </div>
 
+<!-- Modal الجرد السري (الجديد عشان الكيبورد يشتغل عليه) -->
+<div id="adminPassModal" class="modal-overlay">
+  <div class="modal-content text-black">
+    <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
+    <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
+    <!-- تم إضافة الكلاس form-input عشان يفتح الكيبورد التاتش تلقائي -->
+    <input type="password" id="adminPassInput" class="form-input text-2xl text-center py-3 mb-4" placeholder="••••">
+    <div class="flex gap-2">
+        <button onclick="executeShiftSales()" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors">تأكيد</button>
+        <button onclick="document.getElementById('adminPassModal').classList.remove('open')" class="flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <div id="startShiftModal" class="modal-overlay">
   <div class="modal-content text-black">
     <div class="text-3xl text-center mb-2">🔓</div>
@@ -225,7 +236,6 @@ let CURRENT_USER = null; let CURRENT_BRANCH = null; let CURRENT_SHIFT = null;
 let products = []; let cart = {};
 let subtotal = 0; let total = 0;
 
-// متغيرات التعديل
 let EDITING_ORDER_ID = null;
 let EDITING_RECEIPT_NUM = null;
 
@@ -315,12 +325,33 @@ function onKeyPress(button) {
   }
 }
 
-async function checkShiftSales() {
-    const pass = prompt("أدخل الرقم السري للمدير لمعرفة المبيعات:");
+// دالة فتح مودال الجرد السري
+function openShiftSalesModal() {
+    document.getElementById('adminPassModal').classList.add("open");
+    const passInput = document.getElementById('adminPassInput');
+    passInput.value = "";
+    
+    // إجبار الكيبورد يفتح على مربع الباسورد
+    selectedInputName = 'adminPassInput';
+    if(keyboard) keyboard.setInput("");
+    passInput.focus();
+    
+    // إظهار الكيبورد تلقائي
+    const kb = document.getElementById("keyboardWrapper");
+    kb.classList.remove("hidden");
+    if(!keyboard) initKeyboard();
+}
+
+// دالة تنفيذ الجرد بعد ما يكتب الباسورد بالكيبورد ويدوس تأكيد
+async function executeShiftSales() {
+    const pass = document.getElementById('adminPassInput').value;
     if (pass !== "2005") {
         if(pass) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
         return;
     }
+    
+    // نقفل المودال الأول
+    document.getElementById('adminPassModal').classList.remove("open");
     
     try {
         const { data: orders } = await supabaseClient.from("orders")
@@ -414,7 +445,6 @@ function renderProducts() {
   const search = document.getElementById("productSearch").value.toLowerCase();
   const filtered = products.filter(p => p.name.toLowerCase().includes(search) || (p.barcode && p.barcode.includes(search)));
   
-  // تشكيلة ألوان مريحة للعين وفاتحة جداً عشان تميز المنتجات
   const cardColors = [
       'bg-blue-100 border-blue-400', 
       'bg-green-100 border-green-400', 
@@ -501,7 +531,6 @@ function updateCart() {
   const list = document.getElementById("cartList");
   const entries = Object.values(cart);
   
-  // تكبير العناصر جوه السلة
   list.innerHTML = entries.map(e => `
     <div class="flex justify-between items-center mb-3 bg-white bg-opacity-10 p-3 rounded-lg text-base font-bold">
       <div class="w-1/2 leading-tight">${escapeHtml(e.name)}</div>
