@@ -68,7 +68,7 @@
       <div class="nav-item" data-tab="inventory"><span>📦</span><span>المخزن والإنتاج</span></div>
       <div class="nav-item" data-tab="products"><span>🥐</span><span>المنتجات والخامات</span></div>
       <div class="nav-item" data-tab="shifts"><span>👥</span><span>الورديات والمبيعات</span></div>
-      <div class="nav-item" data-tab="hr"><span>🏢</span><span>الموارد البشرية</span></div>
+      <div class="nav-item" data-tab="hr"><span>🏢</span><span>الموارد البشرية والإعدادات</span></div>
     </nav>
     <div class="px-6 py-5">
       <button onclick="window.location.href='pos_1.html'" class="w-full text-center text-xs font-bold py-3 rounded-lg mb-3 bg-green-600 text-white hover:bg-green-700">🛒 الانتقال لشاشة الكاشير</button>
@@ -162,7 +162,9 @@
 
       <section id="tab-hr" class="content-section">
         <div class="mb-6 flex justify-between items-center">
-          <h2 class="font-display font-extrabold text-2xl">🏢 الموارد البشرية والرواتب</h2>
+          <h2 class="font-display font-extrabold text-2xl">🏢 الموارد البشرية والإعدادات</h2>
+          <!-- الزرار الجديد لفتح إعدادات الفاتورة من الإدارة -->
+          <button onclick="openReceiptSettings()" class="bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold text-sm hover:bg-yellow-600 transition">⚙️ إعدادات الفاتورة</button>
         </div>
         <div class="stat-card overflow-hidden">
           <div class="px-5 py-4 flex justify-between items-center border-b">
@@ -181,6 +183,23 @@
 
     </div>
   </main>
+</div>
+
+<!-- Modal إعدادات الفاتورة اللي اتنقل من شاشة الكاشير -->
+<div id="receiptSettingsModal" class="modal-overlay">
+  <div class="app-modal p-6 rounded-xl w-[400px]">
+    <h3 class="font-bold text-xl mb-4 text-center">⚙️ إعدادات الفاتورة والفرع</h3>
+    <label class="form-label">اسم المخبز:</label>
+    <input type="text" id="bakeryNameEn" placeholder="مثال: مخبز العائلة" class="form-input mb-3">
+    <label class="form-label">رابط صورة اللوجو (URL):</label>
+    <input type="text" id="bakeryLogoUrl" placeholder="رابط صورة اللوجو (اختياري)" class="form-input mb-3">
+    <label class="form-label">رسالة الترحيب أسفل الفاتورة:</label>
+    <input type="text" id="welcomeMessage" placeholder="شكراً لزيارتكم" class="form-input mb-4">
+    <div class="flex gap-2">
+        <button onclick="saveReceiptSettings()" class="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold">حفظ التعديلات</button>
+        <button onclick="closeReceiptSettings()" class="flex-1 bg-gray-500 text-white py-2 rounded-lg font-bold">إلغاء</button>
+    </div>
+  </div>
 </div>
 
 <div id="addStaffModal" class="modal-overlay">
@@ -228,7 +247,7 @@
 
 <div id="productModalOverlay" class="modal-overlay">
   <div class="app-modal p-6 rounded-xl w-[400px]">
-    <h3 class="font-bold mb-4">إضافة منتج</h3>
+    <h3 class="font-bold mb-4">إضافة منتج جديد وتحديد وصفته</h3>
     <input id="newProdName" type="text" class="form-input mb-2" placeholder="اسم المنتج">
     <input id="newProdBarcode" type="text" class="form-input mb-2" placeholder="الباركود (اختياري)">
     <input id="newProdPrice" type="number" class="form-input mb-2" placeholder="السعر">
@@ -236,15 +255,20 @@
       <option value="bakery">مخبوزات</option>
       <option value="sweets">حلويات</option>
     </select>
-    <div class="border p-2 rounded mb-4">
-      <p class="text-xs font-bold mb-2">الوصفة (الخامات)</p>
-      <select id="recipeIngredientSelect" class="form-select mb-1"></select>
-      <input id="recipeQtyInput" type="number" class="form-input mb-1" placeholder="الجرامات">
-      <button id="addRecipeIngredientBtn" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">أضف للوصفة</button>
-      <div id="recipeList" class="mt-2 text-xs"></div>
+    <div class="border border-gray-200 bg-gray-50 p-3 rounded-lg mb-4">
+      <p class="text-sm font-bold text-teal-700 mb-2">الوصفة (الخامات المستخدمة)</p>
+      <div class="flex gap-2 mb-2">
+          <select id="recipeIngredientSelect" class="form-select flex-1 text-xs"></select>
+          <input id="recipeQtyInput" type="number" class="form-input w-24 text-xs" placeholder="الكمية">
+          <button id="addRecipeIngredientBtn" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold">أضف</button>
+      </div>
+      <!-- القائمة اللي بتعرض الخامات اللي إنت ضفتها للوصفة -->
+      <ul id="recipeList" class="text-xs text-gray-700 max-h-24 overflow-y-auto bg-white rounded border border-gray-200 p-1">
+          <li class="p-1 text-center text-gray-400">لم يتم إضافة خامات للوصفة بعد</li>
+      </ul>
     </div>
-    <button id="productSaveBtn" class="bg-green-600 text-white p-2 rounded w-full font-bold">حفظ المنتج</button>
-    <button onclick="document.getElementById('productModalOverlay').classList.remove('open')" class="w-full mt-2">إلغاء</button>
+    <button id="productSaveBtn" class="bg-green-600 text-white p-3 rounded-xl w-full font-bold">حفظ المنتج والوصفة</button>
+    <button onclick="document.getElementById('productModalOverlay').classList.remove('open')" class="w-full mt-2 font-bold text-sm text-gray-500">إلغاء</button>
   </div>
 </div>
 
@@ -259,7 +283,9 @@ const authCreatorClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { au
 let CURRENT_USER = null; 
 let CURRENT_BRANCH_ID = null;
 
-// دالة تنظيف النصوص (الحماية من XSS)
+// مصفوفة مؤقتة لتخزين الخامات للوصفة قبل ما تحفظ المنتج كله
+let pendingRecipeIngredients = [];
+
 function escapeHtml(str) {
   if (!str) return '';
   const div = document.createElement('div');
@@ -310,7 +336,6 @@ document.getElementById("saveNewStaffBtn").addEventListener("click", async () =>
   loadPayrollSummary();
 });
 
-// دالة مشتركة لإضافة خامة جديدة
 async function createNewIngredient() {
   const name = prompt("اسم الخامة الجديدة (مثال: زيت، سكر، خميرة):");
   if(!name) return;
@@ -401,6 +426,55 @@ document.getElementById("prodConfirmBtn").addEventListener("click", async () => 
   }
 });
 
+
+// === برمجة زرار إضافة خامة لوصفة المنتج ===
+document.getElementById("addRecipeIngredientBtn").addEventListener("click", () => {
+    const select = document.getElementById("recipeIngredientSelect");
+    const ingId = select.value;
+    const ingName = select.options[select.selectedIndex].text;
+    const qtyText = document.getElementById("recipeQtyInput").value;
+    const qty = Number(qtyText);
+
+    if(!ingId || !qtyText || isNaN(qty) || qty <= 0) {
+        alert("اكتب الكمية صح الأول!");
+        return;
+    }
+
+    // التحقق لو الخامة متضافة قبل كده عشان نزود عليها
+    const existingIndex = pendingRecipeIngredients.findIndex(i => i.ingredient_id === ingId);
+    if(existingIndex >= 0) {
+        pendingRecipeIngredients[existingIndex].quantity_grams += qty;
+    } else {
+        pendingRecipeIngredients.push({ ingredient_id: ingId, name: ingName, quantity_grams: qty });
+    }
+
+    document.getElementById("recipeQtyInput").value = "";
+    renderPendingRecipe();
+});
+
+// عرض الخامات المتضافة للوصفة
+function renderPendingRecipe() {
+    const list = document.getElementById("recipeList");
+    if(pendingRecipeIngredients.length === 0) {
+        list.innerHTML = '<li class="p-1 text-center text-gray-400">لم يتم إضافة خامات للوصفة بعد</li>';
+        return;
+    }
+
+    list.innerHTML = pendingRecipeIngredients.map((ing, index) => `
+        <li class="flex justify-between items-center p-1 border-b last:border-b-0">
+            <span>${escapeHtml(ing.name)} (${ing.quantity_grams})</span>
+            <button onclick="removePendingIngredient(${index})" class="text-red-500 font-bold px-2 hover:bg-red-50 rounded">✕</button>
+        </li>
+    `).join("");
+}
+
+// مسح خامة من الوصفة
+window.removePendingIngredient = function(index) {
+    pendingRecipeIngredients.splice(index, 1);
+    renderPendingRecipe();
+}
+
+// === حفظ المنتج مع الوصفة كاملة ===
 document.getElementById("productSaveBtn").addEventListener("click", async () => {
   const name = document.getElementById("newProdName").value;
   const barcode = document.getElementById("newProdBarcode").value;
@@ -412,27 +486,53 @@ document.getElementById("productSaveBtn").addEventListener("click", async () => 
   const btn = document.getElementById("productSaveBtn");
   btn.textContent = "جاري الحفظ..."; btn.disabled = true;
 
-  await supabaseClient.from("products").insert({ name: name, barcode: barcode, base_price: price });
-  
-  alert("تم إضافة المنتج للكاشير بنجاح!");
-  document.getElementById("productModalOverlay").classList.remove("open");
-  document.getElementById("newProdName").value = "";
-  document.getElementById("newProdBarcode").value = ""; 
-  document.getElementById("newProdPrice").value = "";
-  btn.textContent = "حفظ المنتج"; btn.disabled = false;
-  
-  loadProductsTable();
+  try {
+      // 1. إنشاء المنتج الأول
+      const { data: newProduct, error: prodError } = await supabaseClient
+          .from("products")
+          .insert({ name: name, barcode: barcode, base_price: price })
+          .select()
+          .single();
+      
+      if(prodError) throw prodError;
+
+      // 2. لو في وصفة، نحفظها في جدول product_ingredients
+      if(pendingRecipeIngredients.length > 0) {
+          const recipeItems = pendingRecipeIngredients.map(ing => ({
+              product_id: newProduct.id,
+              ingredient_id: ing.ingredient_id,
+              quantity_grams: ing.quantity_grams
+          }));
+
+          const { error: recipeError } = await supabaseClient.from("product_ingredients").insert(recipeItems);
+          if (recipeError) throw recipeError;
+      }
+      
+      alert("تم حفظ المنتج ووصفته بنجاح!");
+      document.getElementById("productModalOverlay").classList.remove("open");
+      
+      // تصفير الواجهة
+      document.getElementById("newProdName").value = "";
+      document.getElementById("newProdBarcode").value = ""; 
+      document.getElementById("newProdPrice").value = "";
+      pendingRecipeIngredients = [];
+      renderPendingRecipe();
+      
+      loadProductsTable();
+  } catch(err) {
+      alert("حدث خطأ أثناء الحفظ: " + err.message);
+  } finally {
+      btn.textContent = "حفظ المنتج والوصفة"; btn.disabled = false;
+  }
 });
 
-// تحميل قائمة الخامات للجدول الجديد واستخدام الأسلوب الآمن للزرار
+
 async function loadIngredientsCatalog() { 
   const { data } = await supabaseClient.from("ingredients").select("*").order('id'); 
   
-  // تحديث قوائم الاختيار في شاشات الإضافة
   document.getElementById("receiptIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
   document.getElementById("recipeIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
   
-  // تحديث جدول الخامات الجديد واستخدام الـ dataset والـ Event Listener لتجنب مشاكل الـ Quotes
   document.getElementById("ingredientsTableBody").innerHTML = data.map(i => `
     <tr class="border-b hover:bg-gray-50 transition">
       <td class="p-3 font-bold text-gray-800">${escapeHtml(i.name)}</td>
@@ -447,7 +547,6 @@ async function loadIngredientsCatalog() {
   `).join("");
 }
 
-// تفعيل استجابة زراير تعديل الخامات بأمان تام
 document.getElementById("ingredientsTableBody").addEventListener("click", (e) => {
     const btn = e.target.closest(".edit-ing-btn");
     if (btn) {
@@ -455,7 +554,6 @@ document.getElementById("ingredientsTableBody").addEventListener("click", (e) =>
     }
 });
 
-// دالة تعديل الخامة الجديدة
 async function editIngredient(id, currentName, currentUnit) {
   let unit = prompt(`تعديل معيار الخامة (${currentName}):\n(اكتب: gram أو liter أو ml أو kg أو قطعة)`, currentUnit);
   if (!unit) return;
@@ -482,7 +580,7 @@ async function editIngredient(id, currentName, currentUnit) {
       if (error) throw error;
       
       alert("تم تعديل المعيار بنجاح!");
-      loadIngredientsCatalog(); // تحديث الجدول فوراً
+      loadIngredientsCatalog(); 
   } catch (err) {
       alert("حدث خطأ أثناء التعديل: " + err.message);
   }
@@ -567,18 +665,22 @@ async function loadOrders() {
     `).join("");
 }
 
+// تعديل طباعة الفاتورة من الإدارة عشان تقرا من الداتابيز
 async function reprintOrder(orderId, receiptNum, customerName, totalAmount) {
     const { data: items } = await supabaseClient.from('order_items').select('quantity, unit_price, products(name)').eq('order_id', orderId);
-    const nameEn = escapeHtml(localStorage.getItem('bakeryNameEn') || 'مخبز العائلة');
-    const logoUrl = escapeHtml(localStorage.getItem('bakeryLogoUrl') || '');
-    const welcomeMsg = escapeHtml(localStorage.getItem('welcomeMessage') || 'شكراً لزيارتكم');
+    
+    // سحب الإعدادات من الداتابيز مباشرة
+    const { data: settings } = await supabaseClient.from('branch_settings').select('*').eq('branch_id', CURRENT_BRANCH_ID).maybeSingle();
+    
+    const nameEn = escapeHtml(settings?.bakery_name || 'مخبز العائلة');
+    const logoUrl = escapeHtml(settings?.logo_url || '');
+    const welcomeMsg = escapeHtml(settings?.welcome_message || 'شكراً لزيارتكم');
 
     let html = ``;
     if (logoUrl) html += `<img src="${logoUrl}" id="receiptLogo" class="r-logo">`;
     html += `<div class="r-title">${nameEn}</div><div class="text-center text-xs mb-2">(نسخة مطبوعة)</div><div class="r-divider"></div><div class="r-row"><span>رقم:</span><span>${receiptNum}</span></div>`;
     if(customerName && customerName !== 'null' && customerName !== 'عميل نقدي') html += `<div class="r-row"><span>العميل:</span><span>${customerName}</span></div>`;
     
-    // الجدول بالتنسيق الجديد اللي بيعرض السعر
     html += `<div class="r-divider"></div><table><tr><th>الصنف</th><th>سعر</th><th>ك</th><th>ج</th></tr>`;
     items.forEach(i => {
         html += `<tr><td>${escapeHtml(i.products.name)}</td><td>${Number(i.unit_price).toFixed(2)}</td><td>${i.quantity}</td><td>${(i.unit_price * i.quantity).toFixed(2)}</td></tr>`;
@@ -596,6 +698,44 @@ async function reprintOrder(orderId, receiptNum, customerName, totalAmount) {
     }
 }
 
+// === برمجة مودال الإعدادات ===
+async function openReceiptSettings() {
+    document.getElementById('receiptSettingsModal').classList.add("open");
+    
+    // جلب الإعدادات من الداتابيز
+    const { data, error } = await supabaseClient.from("branch_settings").select("*").eq("branch_id", CURRENT_BRANCH_ID).maybeSingle();
+    
+    if (data) {
+        document.getElementById('bakeryNameEn').value = data.bakery_name || '';
+        document.getElementById('bakeryLogoUrl').value = data.logo_url || '';
+        document.getElementById('welcomeMessage').value = data.welcome_message || '';
+    }
+}
+
+function closeReceiptSettings() {
+    document.getElementById('receiptSettingsModal').classList.remove("open");
+}
+
+async function saveReceiptSettings() {
+    const name = document.getElementById('bakeryNameEn').value;
+    const logo = document.getElementById('bakeryLogoUrl').value;
+    const msg = document.getElementById('welcomeMessage').value;
+
+    const { error } = await supabaseClient.from("branch_settings").upsert({
+        branch_id: CURRENT_BRANCH_ID,
+        bakery_name: name,
+        logo_url: logo,
+        welcome_message: msg
+    });
+
+    if (error) {
+        alert("حدث خطأ أثناء الحفظ: " + error.message);
+    } else {
+        alert("تم حفظ الإعدادات بنجاح، وستسمع في شاشات الكاشير فوراً!");
+        closeReceiptSettings();
+    }
+}
+
 document.querySelectorAll(".nav-item").forEach(item => { 
   item.addEventListener("click", () => { 
     document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active")); 
@@ -606,7 +746,11 @@ document.querySelectorAll(".nav-item").forEach(item => {
 });
 
 function openReceiptModal() { document.getElementById("receiptModalOverlay").classList.add("open"); }
-function openProductModal() { document.getElementById("productModalOverlay").classList.add("open"); }
+function openProductModal() { 
+    document.getElementById("productModalOverlay").classList.add("open"); 
+    pendingRecipeIngredients = [];
+    renderPendingRecipe();
+}
 
 document.getElementById("logoutBtn").addEventListener("click", async () => { 
   await supabaseClient.auth.signOut(); 
