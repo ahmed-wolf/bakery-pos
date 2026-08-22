@@ -1,217 +1,3 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>نقطة البيع | المخبز</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
-<!-- مكتبة الكيبورد التاتش -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/css/index.css">
-<script src="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/index.js"></script>
-
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-<style>
-  :root { --cream: #F6EEDD; --paper: #FFFDF8; --crust: #3D2B1F; --crust-2: #2A1D15; --ink: #2B2118; --honey: #C98A3D; --sage: #4C7A4C; --brick: #A8453A; --border: rgba(61,43,31,0.15); }
-  body { font-family: 'Tajawal', sans-serif; background: var(--cream); color: var(--ink); overscroll-behavior: none; }
-  .font-display { font-family: 'Cairo', sans-serif; }
-  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: var(--honey); border-radius: 8px; }
-  
-  .product-card { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; }
-  .product-card:active { transform: scale(0.92); box-shadow: none; }
-  
-  .form-input { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: bold; }
-
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; transition: all 0.3s ease; }
-  .modal-overlay.open { display: flex; }
-  .modal-content { background: var(--cream); border-radius: 16px; padding: 20px; width: 400px; max-width: 90%; }
-  
-  #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); }
-  .simple-keyboard { color: #000; font-weight: bold; }
-  
-  #printArea { display: none; }
-  @media print {
-    @page { margin: 0; size: 80mm auto; }
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    
-    #printArea { 
-        display: block; position: absolute; top: 0; left: 0; right: 0; 
-        width: 100%; 
-        padding-right: 2mm; 
-        padding-left: 8mm; 
-        box-sizing: border-box; direction: rtl;
-        background: #fff; color: #000; font-family: 'Tajawal', sans-serif; 
-        font-size: 16px; 
-    }
-    
-    .r-logo { max-width: 95px; margin: -5px auto 5px auto; display: block; filter: grayscale(100%) contrast(300%); }
-    .r-title { font-size: 22px; font-weight: bold; text-align: center; } 
-    .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
-    .r-row { display: flex; justify-content: space-between; font-size: 17px; font-weight: bold; } 
-    
-    table { width: 100%; text-align: right; border-collapse: collapse; margin: 8px 0; table-layout: fixed; }
-    th { border-bottom: 1px dashed #000; padding-bottom: 5px; font-size: 15px; font-weight: bold; }
-    td { padding-top: 5px; padding-bottom: 5px; font-size: 16px; font-weight: bold; word-wrap: break-word; overflow-wrap: break-word; }
-    
-    th:nth-child(1), td:nth-child(1) { width: 45%; text-align: right; padding-left: 2px; }
-    th:nth-child(2), td:nth-child(2) { width: 20%; text-align: center; }
-    th:nth-child(3), td:nth-child(3) { width: 12%; text-align: center; }
-    th:nth-child(4), td:nth-child(4) { width: 23%; text-align: left; }
-  }
-</style>
-</head>
-<body class="h-screen flex flex-col">
-
-<header class="flex items-center justify-between px-4 py-3 shrink-0" style="background: var(--crust); color: var(--cream);">
-  <div class="flex items-center gap-2">
-    <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg" style="background: var(--honey);">🥐</div>
-    <h1 class="font-display font-bold text-lg hidden md:block">نقطة البيع</h1>
-  </div>
-  <div class="flex gap-1 overflow-x-auto">
-    <button onclick="openShiftSalesModal()" class="bg-teal-600 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-teal-700 transition">
-        👁️ جرد
-    </button>
-    <button onclick="openEditOrderModal()" class="bg-indigo-600 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-indigo-700 transition">
-        🔍 تعديل
-    </button>
-    <button onclick="openDrawer()" class="px-2 py-2 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-700 transition">
-      💵 درج
-    </button>
-    <button id="endShiftBtn" class="px-2 py-2 rounded-lg font-bold text-xs bg-red-600 text-white hover:bg-red-700">🔒 إغلاق</button>
-    <button onclick="quickLogout()" class="bg-gray-500 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-gray-600 transition">
-        🏃 خروج
-    </button>
-    <button id="returnAdminBtn" class="hidden bg-gray-800 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-gray-900 transition">
-      الإدارة
-    </button>
-  </div>
-</header>
-
-<div class="flex-1 flex overflow-hidden">
-  
-  <main class="flex-1 flex flex-col p-4 border-l border-gray-300 relative">
-    <input type="text" id="productSearch" placeholder="🔍 ابحث عن منتج أو باركود..." class="form-input mb-4 p-4 text-xl">
-    <div id="categoryTabs" class="flex gap-2 overflow-x-auto mb-4 pb-2"></div>
-    <div id="productGrid" class="flex-1 overflow-y-auto grid grid-cols-3 md:grid-cols-4 gap-4 content-start"></div>
-    
-    <div id="keyboardWrapper" class="hidden">
-        <div class="flex justify-between mb-2">
-            <span class="text-sm font-bold text-gray-700">لوحة المفاتيح</span>
-            <button onclick="closeKeyboard()" class="text-red-500 font-bold text-sm bg-white px-2 rounded hover:bg-red-100">إغلاق ✕</button>
-        </div>
-        <div class="simple-keyboard" dir="ltr"></div>
-    </div>
-  </main>
-
-  <div class="w-24 md:w-32 bg-gray-100 border-l border-gray-300 flex flex-col p-2 shrink-0 select-none shadow-inner z-10">
-    <div class="text-center text-xs font-bold text-gray-500 mb-1">الكمية المضافة</div>
-    <div id="multiplierDisplay" class="bg-white border-2 border-blue-400 rounded-lg text-center font-extrabold text-2xl py-2 mb-3 shadow-inner text-blue-600">1</div>
-    
-    <div class="grid grid-cols-2 gap-1 flex-1 content-start">
-      <button onclick="appendMultiplier(7)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">7</button>
-      <button onclick="appendMultiplier(8)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">8</button>
-      <button onclick="appendMultiplier(9)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">9</button>
-      <button onclick="appendMultiplier(4)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">4</button>
-      <button onclick="appendMultiplier(5)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">5</button>
-      <button onclick="appendMultiplier(6)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">6</button>
-      <button onclick="appendMultiplier(1)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">1</button>
-      <button onclick="appendMultiplier(2)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">2</button>
-      <button onclick="appendMultiplier(3)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">3</button>
-      <button onclick="appendMultiplier(0)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">0</button>
-      <button onclick="appendMultiplier('.')" class="bg-white rounded-lg py-3 font-bold text-3xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition text-blue-600 pb-5">.</button>
-      <button onclick="clearMultiplier()" class="bg-red-100 text-red-600 rounded-lg py-3 font-bold text-lg shadow-sm border border-red-200 hover:bg-red-200 active:bg-red-300 transition col-span-2">مسح (C)</button>
-    </div>
-  </div>
-
-  <aside id="rightSidebar" class="w-1/3 flex flex-col h-full overflow-y-auto" style="background: var(--crust-2); color: var(--cream);">
-    <div class="p-4 flex-1 overflow-y-auto min-h-[150px]" id="cartList"></div>
-    
-    <div id="bottomInputsWrapper" class="p-4 shrink-0 transition-all duration-300" style="background: rgba(255,255,255,0.05);">
-      <input type="text" id="customerName" placeholder="👤 اسم العميل (اختياري)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
-      <input type="text" id="orderNotes" placeholder="📝 ملاحظات (مثال: خصم ضيافة)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
-      
-      <div class="flex gap-2 mb-2">
-        <div class="flex-1">
-          <label class="text-sm font-bold text-gray-400">خصم %</label>
-          <!-- الحل: تغيير type="number" لـ type="text" عشان الكيبورد التاتش ميقفش -->
-          <input type="text" inputmode="decimal" id="discountPercent" value="0" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off">
-        </div>
-        <div class="flex-1">
-          <label class="text-sm font-bold text-gray-400">خصم (ج)</label>
-          <!-- الحل: تغيير type="number" لـ type="text" عشان الكيبورد التاتش ميقفش -->
-          <input type="text" inputmode="decimal" id="discountAmount" value="0" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off">
-        </div>
-      </div>
-      
-      <div class="flex justify-between items-center text-lg font-bold text-gray-300 mb-1">
-        <span>الإجمالي الفرعي:</span> <span id="subtotalVal">0.00 ج</span>
-      </div>
-      <div class="flex justify-between items-center font-black text-2xl text-yellow-400 mb-4">
-        <span>المطلوب:</span> <span id="totalVal">0.00 ج</span>
-      </div>
-      
-      <button id="checkoutBtn" class="w-full py-4 rounded-2xl font-black text-xl bg-green-600 text-white hover:bg-green-700 mb-2 transition-colors">تأكيد وطباعة 🖨️</button>
-      <button id="cancelBtn" class="w-full py-3 rounded-2xl font-bold border-2 border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition-colors">إلغاء الطلب</button>
-    </div>
-  </aside>
-</div>
-
-<!-- Modal تعديل الفاتورة -->
-<div id="editOrderModal" class="modal-overlay">
-  <div class="modal-content text-black">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-xl">🔍 بحث عن فاتورة لتعديلها</h3>
-        <button onclick="closeEditOrderModal()" class="text-gray-500 font-bold hover:text-red-500 text-xl">✕</button>
-    </div>
-    <p class="text-sm text-gray-600 mb-4">اكتب رقم الفاتورة (مثال: R-123456789) لاسترجاعها للسلة والتعديل عليها.</p>
-    <input type="text" id="searchReceiptInput" class="form-input text-center text-lg py-3 mb-4" placeholder="رقم الفاتورة..." autocomplete="off">
-    <button id="searchOrderBtn" onclick="searchOrderForEdit()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors">بحث واسترجاع للسلة</button>
-  </div>
-</div>
-
-<div id="adminPassModal" class="modal-overlay">
-  <div class="modal-content text-black">
-    <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
-    <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
-    
-    <div id="managerCodeBox" tabindex="0" class="form-input text-3xl text-center py-3 mb-4 h-14 flex items-center justify-center cursor-pointer bg-white border border-gray-300 rounded-lg select-none outline-none focus:ring-2 focus:ring-teal-500">
-        <span id="fakeDotsDisplay" class="text-gray-400 text-lg">••••</span>
-    </div>
-    
-    <div class="flex gap-2">
-        <button onclick="executeShiftSales()" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors">تأكيد</button>
-        <button onclick="closeAdminModal()" class="flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">إلغاء</button>
-    </div>
-  </div>
-</div>
-
-<div id="startShiftModal" class="modal-overlay">
-  <div class="modal-content text-black">
-    <div class="text-3xl text-center mb-2">🔓</div>
-    <h3 class="font-bold text-xl mb-2 text-center">بداية الوردية</h3>
-    <p class="text-sm text-gray-600 mb-4 text-center">أدخل العهدة الافتتاحية (النقدية الموجودة في الدرج حالياً) لفتح الوردية.</p>
-    <!-- تغيير الـ type هنا كمان -->
-    <input type="text" inputmode="decimal" id="startShiftCashInput" class="form-input text-2xl text-center py-4 mt-2 mb-4 font-bold" placeholder="0.00" autocomplete="off">
-    <button id="confirmStartShiftBtn" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors">✓ ابدأ الوردية</button>
-  </div>
-</div>
-
-<div id="endShiftModal" class="modal-overlay">
-  <div class="modal-content text-black">
-    <h3 class="font-bold text-xl mb-4 text-center">تقفيل الوردية</h3>
-    <p class="text-sm text-gray-600 mb-4 text-center">النظام هيحسب مبيعاتك ويطبعلك تقرير الوردية (Z-Report).</p>
-    <label class="font-bold text-sm">النقدية الفعلية في الدرج (الجرد)</label>
-    <!-- تغيير الـ type هنا كمان -->
-    <input type="text" inputmode="decimal" id="actualCashInput" class="form-input text-xl text-center py-3 mt-2 mb-4" placeholder="0.00" autocomplete="off">
-    <button id="confirmEndShiftBtn" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors">تأكيد الإغلاق وطباعة التقرير</button>
-    <button onclick="closeEndShiftModal()" class="w-full py-2 mt-2 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition-colors">إلغاء</button>
-  </div>
-</div>
-
-<div id="printArea"></div>
-
 <script>
 const SUPABASE_URL = "https://rjhsjekwixavydzkghqt.supabase.co";
 const SUPABASE_KEY = "sb_publishable_lHjuLBBq_tr59ziXYvFSag_UMPkGMkj";
@@ -251,6 +37,38 @@ function getMultiplier() {
   return (isNaN(val) || val <= 0) ? 1 : val; 
 }
 
+// === دالة حاسبة الخصم العافية (النهائية) ===
+function calculateAndApplyDiscount(source) {
+    let sub = subtotal; 
+    let pct = 0;
+    let amt = 0;
+
+    const discPctEl = document.getElementById("discountPercent");
+    const discAmtEl = document.getElementById("discountAmount");
+
+    if (source === 'pct') {
+        pct = parseFloat(discPctEl.value) || 0;
+        if (pct > 100) { pct = 100; discPctEl.value = "100"; }
+        amt = sub * (pct / 100);
+        discAmtEl.value = amt > 0 ? amt.toFixed(2) : "";
+    } else if (source === 'amt') {
+        amt = parseFloat(discAmtEl.value) || 0;
+        if (amt > sub) { amt = sub; discAmtEl.value = sub; }
+        pct = sub > 0 ? (amt / sub) * 100 : 0;
+        discPctEl.value = pct > 0 ? pct.toFixed(2) : "";
+    }
+
+    let finalTotal = sub - amt;
+    document.getElementById("subtotalVal").textContent = sub.toFixed(2) + " ج";
+    document.getElementById("totalVal").textContent = finalTotal.toFixed(2) + " ج";
+    total = finalTotal; 
+}
+
+// ربط الحاسبة بكيبورد اللاب توب
+document.getElementById("discountPercent").addEventListener("input", () => calculateAndApplyDiscount('pct'));
+document.getElementById("discountAmount").addEventListener("input", () => calculateAndApplyDiscount('amt'));
+
+
 // === إعدادات الكيبورد الذكي ===
 let keyboard;
 let selectedInputName = "productSearch"; 
@@ -285,7 +103,7 @@ function initKeyboard() {
 
 function setKeyboardLayout(inputId) {
     if(!keyboard) return;
-    const numpadInputs = ['discountPercent', 'discountAmount', 'managerCodeBox', 'startShiftCashInput', 'actualCashInput'];
+    const numpadInputs = ['discountPercent', 'discountAmount', 'startShiftCashInput', 'actualCashInput'];
     if (numpadInputs.includes(inputId)) {
         keyboard.setOptions({ layout: layoutNumpad });
     } else {
@@ -338,7 +156,7 @@ managerBox.addEventListener("click", () => {
 managerBox.addEventListener("focus", () => {
     selectedInputName = 'managerCodeBox';
     if(!keyboard) initKeyboard();
-    setKeyboardLayout('managerCodeBox');
+    keyboard.setOptions({ layout: layoutNumpad });
     showKeyboardWithScroll(managerBox);
 });
 
@@ -363,7 +181,6 @@ document.querySelectorAll('.form-input').forEach(input => {
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
     
-    // الحل السحري عشان يمسح الصفر أول ما تدوس عليه فتكتب على نضافة
     if (e.target.value === "0" || e.target.value === "0.00") {
         e.target.value = "";
     }
@@ -385,10 +202,19 @@ document.querySelectorAll('.form-input').forEach(input => {
 
 function onChange(input) {
   if (selectedInputName === 'managerCodeBox') return; 
+  
   const el = document.getElementById(selectedInputName);
   if(el) {
       el.value = input;
-      el.dispatchEvent(new Event('input', { bubbles: true })); 
+      
+      // إجبار الكيبورد التاتش إنه يحسب الخصم فوراً
+      if (selectedInputName === 'discountPercent') {
+          calculateAndApplyDiscount('pct');
+      } else if (selectedInputName === 'discountAmount') {
+          calculateAndApplyDiscount('amt');
+      } else {
+          el.dispatchEvent(new Event('input', { bubbles: true })); 
+      }
   }
 }
 
@@ -399,7 +225,7 @@ function onKeyPress(button) {
       } else if (button === '{enter}') {
           executeShiftSales();
           return;
-      } else if (/^[0-9.]$/.test(button)) {
+      } else if (/^[0-9]$/.test(button)) {
           managerPassString += button;
       }
       updateFakeDots(managerPassString);
@@ -426,7 +252,7 @@ function openShiftSalesModal() {
     
     selectedInputName = 'managerCodeBox';
     if(!keyboard) initKeyboard();
-    setKeyboardLayout('managerCodeBox');
+    keyboard.setOptions({ layout: layoutNumpad });
     showKeyboardWithScroll(document.getElementById('managerCodeBox'));
     document.getElementById('managerCodeBox').focus();
 }
@@ -617,23 +443,6 @@ function addToCart(id) {
   clearMultiplier();
 }
 
-const discPct = document.getElementById("discountPercent");
-const discAmt = document.getElementById("discountAmount");
-
-discPct.addEventListener("input", () => {
-  let pct = parseFloat(discPct.value) || 0;
-  if(pct > 100) { pct = 100; discPct.value = 100; }
-  discAmt.value = (subtotal * (pct / 100)).toFixed(2);
-  updateTotals();
-});
-
-discAmt.addEventListener("input", () => {
-  let amt = parseFloat(discAmt.value) || 0;
-  if(amt > subtotal) { amt = subtotal; discAmt.value = subtotal; }
-  discPct.value = subtotal > 0 ? ((amt / subtotal) * 100).toFixed(2) : 0;
-  updateTotals();
-});
-
 function updateCart() {
   const list = document.getElementById("cartList");
   const entries = Object.values(cart);
@@ -651,24 +460,17 @@ function updateCart() {
   `).join("");
 
   subtotal = entries.reduce((sum, e) => sum + (e.base_price * e.qty), 0);
-  let pct = parseFloat(discPct.value) || 0;
-  discAmt.value = (subtotal * (pct / 100)).toFixed(2);
-  updateTotals();
-}
-
-function updateTotals() {
-  let amt = parseFloat(discAmt.value) || 0;
-  total = subtotal - amt;
-  document.getElementById("subtotalVal").textContent = subtotal.toFixed(2) + " ج";
-  document.getElementById("totalVal").textContent = total.toFixed(2) + " ج";
+  
+  // تطبيق الخصم فوراً لو تم زيادة أو تقليل منتج
+  calculateAndApplyDiscount('pct');
 }
 
 function resetCartUI() {
   cart = {}; 
   document.getElementById("customerName").value = ""; 
   document.getElementById("orderNotes").value = "";
-  discPct.value = 0; 
-  discAmt.value = 0; 
+  document.getElementById("discountPercent").value = ""; 
+  document.getElementById("discountAmount").value = ""; 
   updateCart();
   clearMultiplier();
   
@@ -697,8 +499,8 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
 
   const custName = document.getElementById("customerName").value || "عميل نقدي";
   const notes = document.getElementById("orderNotes").value;
-  const dPct = parseFloat(discPct.value) || 0;
-  const dAmt = parseFloat(discAmt.value) || 0;
+  const dPct = parseFloat(document.getElementById("discountPercent").value) || 0;
+  const dAmt = parseFloat(document.getElementById("discountAmount").value) || 0;
   const receiptNum = EDITING_ORDER_ID ? EDITING_RECEIPT_NUM : `R-${Date.now()}`;
 
   try {
@@ -793,8 +595,8 @@ async function searchOrderForEdit() {
 
         document.getElementById("customerName").value = order.customer_name === "عميل نقدي" ? "" : (order.customer_name || "");
         document.getElementById("orderNotes").value = order.notes || "";
-        document.getElementById("discountPercent").value = order.discount_percentage || 0;
-        document.getElementById("discountAmount").value = order.discount_amount || 0;
+        document.getElementById("discountPercent").value = order.discount_percentage || "";
+        document.getElementById("discountAmount").value = order.discount_amount || "";
 
         EDITING_ORDER_ID = order.id;
         EDITING_RECEIPT_NUM = order.receipt_number;
@@ -898,5 +700,3 @@ function printZReport(sales, actual, opening) {
 
 init();
 </script>
-</body>
-</html>
