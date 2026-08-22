@@ -162,7 +162,6 @@
   </aside>
 </div>
 
-<!-- Modal تعديل الفاتورة -->
 <div id="editOrderModal" class="modal-overlay">
   <div class="modal-content text-black">
     <div class="flex justify-between items-center mb-4">
@@ -175,14 +174,13 @@
   </div>
 </div>
 
-<!-- الحل النووي: المربع الجديد المقفول برمجياً كـ Div لمنع جوجل كروم نهائياً -->
 <div id="adminPassModal" class="modal-overlay">
   <div class="modal-content text-black">
     <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
     <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
     
-    <!-- خليناه div عشان المتصفح ميتعرفش عليه، وهنبرمج النقط بالجافاسكريبت -->
-    <div id="managerCodeBox" class="form-input text-3xl text-center py-3 mb-4 h-14 flex items-center justify-center cursor-pointer bg-white text-gray-900 border-gray-300" data-real-pass=""></div>
+    <!-- الحل الذكي: Input عادي من نوع Text عشان كيبورد اللاب يشتغل، بس بـ CSS يخفي النقط، وباسم مختلف تماما يضلل المتصفح -->
+    <input type="text" id="x_auth_check_55" class="form-input text-3xl text-center py-3 mb-4" placeholder="••••" autocomplete="off" spellcheck="false" style="-webkit-text-security: disc;">
     
     <div class="flex gap-2">
         <button onclick="executeShiftSales()" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors">تأكيد</button>
@@ -297,7 +295,7 @@ function initKeyboard() {
 
 function setKeyboardLayout(inputId) {
     if(!keyboard) return;
-    const numpadInputs = ['discountPercent', 'discountAmount', 'managerCodeBox', 'startShiftCashInput', 'actualCashInput'];
+    const numpadInputs = ['discountPercent', 'discountAmount', 'x_auth_check_55', 'startShiftCashInput', 'actualCashInput'];
     if (numpadInputs.includes(inputId)) {
         keyboard.setOptions({ layout: layoutNumpad });
     } else {
@@ -313,10 +311,9 @@ function toggleKeyboard() {
         if(selectedInputName) {
             const el = document.getElementById(selectedInputName);
             if(el) {
-                // تجنب التحديد لو هو الـ div
-                if(el.tagName !== 'DIV') el.focus();
+                el.focus();
                 setKeyboardLayout(selectedInputName);
-                keyboard.setInput(el.dataset.realPass !== undefined ? el.dataset.realPass : el.value);
+                keyboard.setInput(el.value);
             }
         }
     } else {
@@ -325,7 +322,6 @@ function toggleKeyboard() {
 }
 
 document.querySelectorAll('.form-input').forEach(input => {
-  if (input.tagName === 'DIV') return; // هنتعامل معاه لوحده
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
     if(!keyboard) initKeyboard();
@@ -343,26 +339,11 @@ document.querySelectorAll('.form-input').forEach(input => {
   });
 });
 
-// الحدث الخاص للمربع السري عشان يظهر الكيبورد
-document.getElementById('managerCodeBox').addEventListener('click', (e) => {
-    selectedInputName = 'managerCodeBox';
-    if(!keyboard) initKeyboard();
-    setKeyboardLayout('managerCodeBox');
-    document.getElementById("keyboardWrapper").classList.remove("hidden");
-});
-
 function onChange(input) {
   const el = document.getElementById(selectedInputName);
   if(el) {
-      if (selectedInputName === 'managerCodeBox') {
-          // برمجة التشفير الوهمي: نحول الكلام لنقط
-          el.innerText = '•'.repeat(input.length);
-          // نحفظ الباسورد الحقيقي ورا الكواليس
-          el.dataset.realPass = input;
-      } else {
-          el.value = input;
-          el.dispatchEvent(new Event('input', { bubbles: true })); 
-      }
+      el.value = input;
+      el.dispatchEvent(new Event('input', { bubbles: true })); 
   }
 }
 
@@ -371,7 +352,7 @@ function onKeyPress(button) {
       const el = document.getElementById(selectedInputName);
       if(el && selectedInputName === "productSearch") {
           el.dispatchEvent(new KeyboardEvent('keypress', {key: 'Enter'})); 
-      } else if (selectedInputName === "managerCodeBox") {
+      } else if (selectedInputName === "x_auth_check_55") {
           executeShiftSales();
       } else if (selectedInputName === "startShiftCashInput") {
           document.getElementById("confirmStartShiftBtn").click();
@@ -384,18 +365,17 @@ function onKeyPress(button) {
 
 function openShiftSalesModal() {
     document.getElementById('adminPassModal').classList.add("open");
-    const passBox = document.getElementById('managerCodeBox');
+    const passBox = document.getElementById('x_auth_check_55');
     
-    // تصفير المربع تماما
-    passBox.innerText = "";
-    passBox.dataset.realPass = "";
+    passBox.value = "";
     
-    selectedInputName = 'managerCodeBox';
+    selectedInputName = 'x_auth_check_55';
     document.getElementById("keyboardWrapper").classList.remove("hidden");
     if(!keyboard) initKeyboard();
     
-    setKeyboardLayout('managerCodeBox');
+    setKeyboardLayout('x_auth_check_55');
     keyboard.clearInput();
+    passBox.focus(); // نقل المؤشر للمربع عشان لو الكاشير كتب من كيبورد اللاب توب
 }
 
 function closeAdminModal() {
@@ -406,8 +386,7 @@ function closeAdminModal() {
 // ==========================
 
 async function executeShiftSales() {
-    // بناخد الباسورد الحقيقي من ورا الكواليس
-    const pass = document.getElementById('managerCodeBox').dataset.realPass || "";
+    const pass = document.getElementById('x_auth_check_55').value;
     if (pass !== "2005") {
         if(pass) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
         return;
