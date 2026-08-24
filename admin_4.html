@@ -247,7 +247,7 @@
 
 <div id="productModalOverlay" class="modal-overlay">
   <div class="app-modal p-6 rounded-xl w-[400px]">
-    <h3 class="font-bold mb-4">إضافة منتج جديد وتحديد وصفته</h3>
+    <h3 id="productModalTitle" class="font-bold mb-4">إضافة منتج جديد وتحديد وصفته</h3>
     <input id="newProdName" type="text" class="form-input mb-2" placeholder="اسم المنتج">
     <input id="newProdBarcode" type="text" class="form-input mb-2" placeholder="الباركود (اختياري)">
     <input id="newProdPrice" type="number" class="form-input mb-2" placeholder="السعر">
@@ -285,6 +285,8 @@ let CURRENT_BRANCH_ID = null;
 
 // مصفوفة مؤقتة لتخزين الخامات للوصفة قبل ما تحفظ المنتج كله
 let pendingRecipeIngredients = [];
+// لو مش null، معناه إحنا بنعدل منتج موجود بالفعل، مش بنضيف واحد جديد
+let EDITING_PRODUCT_ID = null;
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -474,7 +476,52 @@ window.removePendingIngredient = function(index) {
     renderPendingRecipe();
 }
 
-// === حفظ المنتج مع الوصفة كاملة ===
+// === فتح مودال المنتج، سواء لإضافة منتج جديد أو لتعديل منتج موجود ===
+// لو مبعتش parameter (product = null) هيفتح في وضع "إضافة"
+// لو بعت بيانات منتج (من زرار تعديل) هيفتح في وضع "تعديل" ويجيب الوصفة الحالية من الداتابيز
+async function openProductModal(product = null) {
+    document.getElementById("productModalOverlay").classList.add("open");
+    pendingRecipeIngredients = [];
+    EDITING_PRODUCT_ID = null;
+
+    const titleEl = document.getElementById("productModalTitle");
+    const saveBtn = document.getElementById("productSaveBtn");
+
+    if (product) {
+        // ==== وضع التعديل ====
+        EDITING_PRODUCT_ID = product.id;
+        document.getElementById("newProdName").value = product.name || "";
+        document.getElementById("newProdBarcode").value = product.barcode || "";
+        document.getElementById("newProdPrice").value = product.base_price || "";
+        titleEl.textContent = "تعديل المنتج ووصفته";
+        saveBtn.textContent = "حفظ التعديلات";
+
+        // نجيب الوصفة الحالية للمنتج ده من جدول product_ingredients
+        const { data: recipeRows, error } = await supabaseClient
+            .from("product_ingredients")
+            .select("ingredient_id, quantity_grams, ingredients(name)")
+            .eq("product_id", product.id);
+
+        if (!error && recipeRows) {
+            pendingRecipeIngredients = recipeRows.map(r => ({
+                ingredient_id: r.ingredient_id,
+                name: r.ingredients ? r.ingredients.name : "",
+                quantity_grams: r.quantity_grams
+            }));
+        }
+    } else {
+        // ==== وضع الإضافة ====
+        document.getElementById("newProdName").value = "";
+        document.getElementById("newProdBarcode").value = "";
+        document.getElementById("newProdPrice").value = "";
+        titleEl.textContent = "إضافة منتج جديد وتحديد وصفته";
+        saveBtn.textContent = "حفظ المنتج والوصفة";
+    }
+
+    renderPendingRecipe();
+}
+
+// === حفظ المنتج مع الوصفة كاملة (إضافة جديد أو تعديل موجود) ===
 document.getElementById("productSaveBtn").addEventListener("click", async () => {
   const name = document.getElementById("newProdName").value;
   const barcode = document.getElementById("newProdBarcode").value;
@@ -484,22 +531,44 @@ document.getElementById("productSaveBtn").addEventListener("click", async () => 
   if(!name || !priceText || isNaN(price)) return alert("اكتب اسم المنتج والسعر بشكل صحيح!");
 
   const btn = document.getElementById("productSaveBtn");
+  const originalBtnText = btn.textContent;
   btn.textContent = "جاري الحفظ..."; btn.disabled = true;
 
   try {
-      // 1. إنشاء المنتج الأول
-      const { data: newProduct, error: prodError } = await supabaseClient
-          .from("products")
-          .insert({ name: name, barcode: barcode, base_price: price })
-          .select()
-          .single();
-      
-      if(prodError) throw prodError;
+      let productId;
 
-      // 2. لو في وصفة، نحفظها في جدول product_ingredients
+      if (EDITING_PRODUCT_ID) {
+          // ==== تحديث منتج موجود بالفعل ====
+          const { error: updateError } = await supabaseClient
+              .from("products")
+              .update({ name: name, barcode: barcode, base_price: price })
+              .eq("id", EDITING_PRODUCT_ID);
+          if (updateError) throw updateError;
+
+          productId = EDITING_PRODUCT_ID;
+
+          // نمسح الوصفة القديمة بالكامل الأول، عشان نكتب الوصفة الجديدة بدالها بدون تكرار
+          const { error: deleteError } = await supabaseClient
+              .from("product_ingredients")
+              .delete()
+              .eq("product_id", productId);
+          if (deleteError) throw deleteError;
+      } else {
+          // ==== إنشاء منتج جديد من الأول ====
+          const { data: newProduct, error: prodError } = await supabaseClient
+              .from("products")
+              .insert({ name: name, barcode: barcode, base_price: price })
+              .select()
+              .single();
+          
+          if(prodError) throw prodError;
+          productId = newProduct.id;
+      }
+
+      // في الحالتين، لو في وصفة، نحفظها في جدول product_ingredients
       if(pendingRecipeIngredients.length > 0) {
           const recipeItems = pendingRecipeIngredients.map(ing => ({
-              product_id: newProduct.id,
+              product_id: productId,
               ingredient_id: ing.ingredient_id,
               quantity_grams: ing.quantity_grams
           }));
@@ -508,7 +577,7 @@ document.getElementById("productSaveBtn").addEventListener("click", async () => 
           if (recipeError) throw recipeError;
       }
       
-      alert("تم حفظ المنتج ووصفته بنجاح!");
+      alert(EDITING_PRODUCT_ID ? "تم تعديل المنتج ووصفته بنجاح!" : "تم حفظ المنتج ووصفته بنجاح!");
       document.getElementById("productModalOverlay").classList.remove("open");
       
       // تصفير الواجهة
@@ -516,13 +585,14 @@ document.getElementById("productSaveBtn").addEventListener("click", async () => 
       document.getElementById("newProdBarcode").value = ""; 
       document.getElementById("newProdPrice").value = "";
       pendingRecipeIngredients = [];
+      EDITING_PRODUCT_ID = null;
       renderPendingRecipe();
       
       loadProductsTable();
   } catch(err) {
       alert("حدث خطأ أثناء الحفظ: " + err.message);
   } finally {
-      btn.textContent = "حفظ المنتج والوصفة"; btn.disabled = false;
+      btn.textContent = originalBtnText; btn.disabled = false;
   }
 });
 
@@ -607,13 +677,41 @@ async function loadProductsTable() {
       <td class="p-3">${escapeHtml(p.name)}</td>
       <td class="p-3 font-bold">${p.base_price} ج</td>
       <td class="p-3">
-        <button onclick="toggleProductStatus(event, '${p.id}', ${p.is_active})" class="text-xs px-3 py-1 rounded font-bold transition ${p.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">
-          ${p.is_active ? 'إيقاف ❌' : 'تفعيل ✅'}
-        </button>
+        <div class="flex gap-2">
+          <button class="edit-prod-btn bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-xs font-bold transition" data-id="${p.id}">
+            تعديل ✏️
+          </button>
+          <button onclick="toggleProductStatus(event, '${p.id}', ${p.is_active})" class="text-xs px-3 py-1 rounded font-bold transition ${p.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">
+            ${p.is_active ? 'إيقاف ❌' : 'تفعيل ✅'}
+          </button>
+        </div>
       </td>
     </tr>
   `).join(""); 
 }
+
+// زرار "تعديل" بيجيب بيانات المنتج ووصفته الحالية ويفتحلها المودال
+document.getElementById("productsTableBody").addEventListener("click", async (e) => {
+    const btn = e.target.closest(".edit-prod-btn");
+    if (!btn) return;
+
+    const id = btn.dataset.id;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "جاري التحميل...";
+
+    const { data: product, error } = await supabaseClient.from("products").select("*").eq("id", id).single();
+
+    btn.disabled = false;
+    btn.textContent = originalText;
+
+    if (error || !product) {
+        alert("حدث خطأ أثناء تحميل بيانات المنتج!");
+        return;
+    }
+
+    openProductModal(product);
+});
 
 async function toggleProductStatus(event, id, currentStatus) {
   const confirmMsg = currentStatus ? "هل أنت متأكد أنك تريد إخفاء هذا المنتج من شاشة الكاشير؟" : "هل تريد إعادة تفعيل هذا المنتج؟";
@@ -746,11 +844,6 @@ document.querySelectorAll(".nav-item").forEach(item => {
 });
 
 function openReceiptModal() { document.getElementById("receiptModalOverlay").classList.add("open"); }
-function openProductModal() { 
-    document.getElementById("productModalOverlay").classList.add("open"); 
-    pendingRecipeIngredients = [];
-    renderPendingRecipe();
-}
 
 document.getElementById("logoutBtn").addEventListener("click", async () => { 
   await supabaseClient.auth.signOut(); 
