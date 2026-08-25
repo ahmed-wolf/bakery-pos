@@ -135,12 +135,10 @@
       <div class="flex gap-2 mb-2">
         <div class="flex-1">
           <label class="text-sm font-bold text-gray-400">خصم %</label>
-          <!-- الحل: تغيير type="number" لـ type="text" عشان الكيبورد التاتش ميقفش -->
           <input type="text" inputmode="decimal" id="discountPercent" value="0" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off">
         </div>
         <div class="flex-1">
           <label class="text-sm font-bold text-gray-400">خصم (ج)</label>
-          <!-- الحل: تغيير type="number" لـ type="text" عشان الكيبورد التاتش ميقفش -->
           <input type="text" inputmode="decimal" id="discountAmount" value="0" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off">
         </div>
       </div>
@@ -192,7 +190,6 @@
     <div class="text-3xl text-center mb-2">🔓</div>
     <h3 class="font-bold text-xl mb-2 text-center">بداية الوردية</h3>
     <p class="text-sm text-gray-600 mb-4 text-center">أدخل العهدة الافتتاحية (النقدية الموجودة في الدرج حالياً) لفتح الوردية.</p>
-    <!-- تغيير الـ type هنا كمان -->
     <input type="text" inputmode="decimal" id="startShiftCashInput" class="form-input text-2xl text-center py-4 mt-2 mb-4 font-bold" placeholder="0.00" autocomplete="off">
     <button id="confirmStartShiftBtn" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors">✓ ابدأ الوردية</button>
   </div>
@@ -203,7 +200,6 @@
     <h3 class="font-bold text-xl mb-4 text-center">تقفيل الوردية</h3>
     <p class="text-sm text-gray-600 mb-4 text-center">النظام هيحسب مبيعاتك ويطبعلك تقرير الوردية (Z-Report).</p>
     <label class="font-bold text-sm">النقدية الفعلية في الدرج (الجرد)</label>
-    <!-- تغيير الـ type هنا كمان -->
     <input type="text" inputmode="decimal" id="actualCashInput" class="form-input text-xl text-center py-3 mt-2 mb-4" placeholder="0.00" autocomplete="off">
     <button id="confirmEndShiftBtn" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors">تأكيد الإغلاق وطباعة التقرير</button>
     <button onclick="closeEndShiftModal()" class="w-full py-2 mt-2 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition-colors">إلغاء</button>
@@ -251,36 +247,39 @@ function getMultiplier() {
   return (isNaN(val) || val <= 0) ? 1 : val; 
 }
 
-// === دالة حاسبة الخصم العافية (النهائية) ===
-function calculateAndApplyDiscount(source) {
-    let sub = subtotal; 
-    let pct = 0;
-    let amt = 0;
+// === آلة حاسبة الخصم الموحدة والسريعة ===
+function applyDiscount(type) {
+    const pctEl = document.getElementById("discountPercent");
+    const amtEl = document.getElementById("discountAmount");
+    let sub = subtotal;
 
-    const discPctEl = document.getElementById("discountPercent");
-    const discAmtEl = document.getElementById("discountAmount");
+    let pctVal = parseFloat(pctEl.value) || 0;
+    let amtVal = parseFloat(amtEl.value) || 0;
 
-    if (source === 'pct') {
-        pct = parseFloat(discPctEl.value) || 0;
-        if (pct > 100) { pct = 100; discPctEl.value = "100"; }
-        amt = sub * (pct / 100);
-        discAmtEl.value = amt > 0 ? amt.toFixed(2) : "";
-    } else if (source === 'amt') {
-        amt = parseFloat(discAmtEl.value) || 0;
-        if (amt > sub) { amt = sub; discAmtEl.value = sub; }
-        pct = sub > 0 ? (amt / sub) * 100 : 0;
-        discPctEl.value = pct > 0 ? pct.toFixed(2) : "";
+    if (type === 'pct') {
+        if (pctVal > 100) { pctVal = 100; pctEl.value = "100"; }
+        amtVal = sub * (pctVal / 100);
+        // نحدث الخانة التانية فقط عشان منطيرش الكيبورد من الخانة اللي بنكتب فيها
+        if (document.activeElement !== amtEl && selectedInputName !== 'discountAmount') {
+            amtEl.value = (pctEl.value === "") ? "" : amtVal.toFixed(2);
+        }
+    } else if (type === 'amt') {
+        if (amtVal > sub) { amtVal = sub; amtEl.value = sub; }
+        pctVal = sub > 0 ? (amtVal / sub) * 100 : 0;
+        // نحدث الخانة التانية فقط
+        if (document.activeElement !== pctEl && selectedInputName !== 'discountPercent') {
+            pctEl.value = (amtEl.value === "") ? "" : pctVal.toFixed(2);
+        }
     }
 
-    let finalTotal = sub - amt;
+    total = sub - parseFloat(amtEl.value || 0);
     document.getElementById("subtotalVal").textContent = sub.toFixed(2) + " ج";
-    document.getElementById("totalVal").textContent = finalTotal.toFixed(2) + " ج";
-    total = finalTotal; 
+    document.getElementById("totalVal").textContent = total.toFixed(2) + " ج";
 }
 
-// ربط الحاسبة بكيبورد اللاب توب
-document.getElementById("discountPercent").addEventListener("input", () => calculateAndApplyDiscount('pct'));
-document.getElementById("discountAmount").addEventListener("input", () => calculateAndApplyDiscount('amt'));
+// تشغيل الحاسبة تلقائياً مع أي تغيير
+document.getElementById("discountPercent").addEventListener("input", () => applyDiscount('pct'));
+document.getElementById("discountAmount").addEventListener("input", () => applyDiscount('amt'));
 
 
 // === إعدادات الكيبورد الذكي ===
@@ -374,6 +373,7 @@ managerBox.addEventListener("focus", () => {
     showKeyboardWithScroll(managerBox);
 });
 
+// التعامل المباشر مع مربع الإدارة
 managerBox.addEventListener("keydown", (e) => {
     if (e.key >= '0' && e.key <= '9') {
         e.preventDefault();
@@ -395,6 +395,7 @@ document.querySelectorAll('.form-input').forEach(input => {
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
     
+    // مسح الصفر الافتراضي
     if (e.target.value === "0" || e.target.value === "0.00") {
         e.target.value = "";
     }
@@ -414,21 +415,15 @@ document.querySelectorAll('.form-input').forEach(input => {
   });
 });
 
+// الدالة النضيفة اللي بتبعت إشارة للسيستم إن الكيبورد التاتش بيكتب
 function onChange(input) {
   if (selectedInputName === 'managerCodeBox') return; 
   
   const el = document.getElementById(selectedInputName);
   if(el) {
       el.value = input;
-      
-      // إجبار الكيبورد التاتش إنه يحسب الخصم فوراً
-      if (selectedInputName === 'discountPercent') {
-          calculateAndApplyDiscount('pct');
-      } else if (selectedInputName === 'discountAmount') {
-          calculateAndApplyDiscount('amt');
-      } else {
-          el.dispatchEvent(new Event('input', { bubbles: true })); 
-      }
+      // إرسال الإشارة الإجبارية لتفعيل دوال الخصم والبحث
+      el.dispatchEvent(new Event('input', { bubbles: true })); 
   }
 }
 
@@ -675,8 +670,8 @@ function updateCart() {
 
   subtotal = entries.reduce((sum, e) => sum + (e.base_price * e.qty), 0);
   
-  // تطبيق الخصم فوراً لو تم زيادة أو تقليل منتج
-  calculateAndApplyDiscount('pct');
+  // إعادة حساب الخصم لو السلة اتغيرت
+  applyDiscount('pct');
 }
 
 function resetCartUI() {
