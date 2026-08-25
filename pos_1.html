@@ -30,35 +30,36 @@
   #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); transition: transform 0.3s ease-in-out; }
   .simple-keyboard { color: #000; font-weight: bold; }
   
+ /* Print Styles for Compact Receipt */
   #printArea { display: none; }
   @media print {
-    @page { margin: 0; size: 80mm auto; }
+    @page { margin: 0; }
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
     
     #printArea { 
-        display: block; position: absolute; top: 0; left: 0; right: 0; 
-        width: 100%; 
-        padding-right: 2mm; 
-        padding-left: 8mm; 
+        display: block; position: absolute; top: 0; left: 0; 
+        width: 72mm; /* عرض البون القياسي */
+        padding: 2mm 5mm 2mm 2mm; /* تظبيط الهوامش عشان الكلام ميتقطش من اليمين */
         box-sizing: border-box; direction: rtl;
         background: #fff; color: #000; font-family: 'Tajawal', sans-serif; 
-        font-size: 16px; 
+        font-size: 13px; line-height: 1.3;
     }
     
-    .r-logo { max-width: 95px; margin: -5px auto 5px auto; display: block; filter: grayscale(100%) contrast(300%); }
-    .r-title { font-size: 22px; font-weight: bold; text-align: center; } 
-    .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
-    .r-row { display: flex; justify-content: space-between; font-size: 17px; font-weight: bold; } 
+    .r-logo { max-width: 45px; margin: 0 auto 5px auto; display: block; filter: grayscale(100%) contrast(300%); }
+    .r-title { font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 4px; } 
+    .r-divider { border-top: 1px dashed #000; margin: 4px 0; }
+    .r-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; margin-bottom: 2px; } 
     
-    table { width: 100%; text-align: right; border-collapse: collapse; margin: 8px 0; table-layout: fixed; }
-    th { border-bottom: 1px dashed #000; padding-bottom: 5px; font-size: 15px; font-weight: bold; }
-    td { padding-top: 5px; padding-bottom: 5px; font-size: 16px; font-weight: bold; word-wrap: break-word; overflow-wrap: break-word; }
+    table { width: 100%; text-align: right; border-collapse: collapse; margin: 4px 0; table-layout: fixed; }
+    th { border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 3px 1px; font-size: 12px; }
+    td { padding: 4px 1px; font-size: 13px; font-weight: bold; border-bottom: 1px dotted #ccc; }
     
-    th:nth-child(1), td:nth-child(1) { width: 45%; text-align: right; padding-left: 2px; }
-    th:nth-child(2), td:nth-child(2) { width: 20%; text-align: center; }
-    th:nth-child(3), td:nth-child(3) { width: 12%; text-align: center; }
-    th:nth-child(4), td:nth-child(4) { width: 23%; text-align: left; }
+    /* منع الأرقام من النزول لسطر جديد */
+    th:nth-child(1), td:nth-child(1) { width: 45%; text-align: right; }
+    th:nth-child(2), td:nth-child(2) { width: 20%; text-align: center; white-space: nowrap; }
+    th:nth-child(3), td:nth-child(3) { width: 15%; text-align: center; }
+    th:nth-child(4), td:nth-child(4) { width: 20%; text-align: left; white-space: nowrap; }
   }
 </style>
 </head>
@@ -247,7 +248,7 @@ function getMultiplier() {
   return (isNaN(val) || val <= 0) ? 1 : val; 
 }
 
-// === آلة حاسبة الخصم (بتقرأ من قيمة الخانة مباشرة، مفيش أي اعتماد على الكيبورد) ===
+// === آلة حاسبة الخصم ===
 function applyDiscount(source) {
     const pctEl = document.getElementById("discountPercent");
     const amtEl = document.getElementById("discountAmount");
@@ -291,7 +292,7 @@ function applyDiscount(source) {
     document.getElementById("totalVal").textContent = total.toFixed(2) + " ج";
 }
 
-// تفعيل الحاسبة مع كيبورد اللاب توب (كتابة فعلية)، ومزامنة الـ buffer معاها في نفس الوقت
+// تفعيل الحاسبة مع كيبورد اللاب توب
 document.getElementById("discountPercent").addEventListener("input", (e) => {
     numericBuffers.discountPercent = e.target.value;
     applyDiscount('pct');
@@ -312,8 +313,6 @@ document.getElementById("actualCashInput").addEventListener("input", (e) => {
 let keyboard;
 let selectedInputName = "productSearch"; 
 
-// كل خانة رقمية بقى ليها "دفتر" خاص بيها بيتبني حرف حرف من onKeyPress بس،
-// بالظبط زي طريقة صندوق الـ PIN اللي شغالة 100% من غير أي مشاكل
 const numericFieldIds = ['discountPercent', 'discountAmount', 'startShiftCashInput', 'actualCashInput'];
 let numericBuffers = { discountPercent: "", discountAmount: "", startShiftCashInput: "", actualCashInput: "" };
 
@@ -438,7 +437,6 @@ document.querySelectorAll('.form-input').forEach(input => {
     setKeyboardLayout(selectedInputName);
 
     if (numericFieldIds.includes(selectedInputName)) {
-        // نبتدي الدفتر الخاص بالخانة دي من القيمة الحالية بالظبط
         numericBuffers[selectedInputName] = e.target.value || "";
     } else {
         keyboard.setInput(e.target.value);
@@ -448,10 +446,9 @@ document.querySelectorAll('.form-input').forEach(input => {
   });
 });
 
-// === دالة الكيبورد التاتش العام (للحقول النصية العادية بس، الخانات الرقمية بقت مستقلة تمامًا) ===
 function onChange(input) {
   if (selectedInputName === 'managerCodeBox') return; 
-  if (numericFieldIds.includes(selectedInputName)) return; // بتتعامل معاها onKeyPress بالكامل
+  if (numericFieldIds.includes(selectedInputName)) return; 
   
   const el = document.getElementById(selectedInputName);
   if(el) {
@@ -474,7 +471,7 @@ function onKeyPress(button) {
       return;
   }
 
-  // === الخانات الرقمية (خصم %، خصم ج، العهدة، الجرد الفعلي) ===
+  // === الخانات الرقمية ===
   if (numericFieldIds.includes(selectedInputName)) {
       let buf = numericBuffers[selectedInputName] || "";
 
@@ -916,8 +913,11 @@ document.getElementById("confirmEndShiftBtn").addEventListener("click", async ()
   printZReport(shiftTotal, actualCash, CURRENT_SHIFT.opening_cash);
 
   setTimeout(async () => {
+    // تسجيل الخروج ومحاولة الإغلاق الكامل
     await supabaseClient.auth.signOut();
-    window.location.href = "index.html";
+    window.open('', '_self', ''); 
+    window.close();
+    setTimeout(() => { window.location.href = "index.html"; }, 500);
   }, 2000);
 });
 
