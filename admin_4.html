@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>لوحة الإدارة | مخبز العائلة</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -185,7 +185,7 @@
   </main>
 </div>
 
-<!-- Modal إعدادات الفاتورة اللي اتنقل من شاشة الكاشير -->
+<!-- Modal إعدادات الفاتورة -->
 <div id="receiptSettingsModal" class="modal-overlay">
   <div class="app-modal p-6 rounded-xl w-[400px]">
     <h3 class="font-bold text-xl mb-4 text-center">⚙️ إعدادات الفاتورة والفرع</h3>
@@ -262,7 +262,6 @@
           <input id="recipeQtyInput" type="number" class="form-input w-24 text-xs" placeholder="الكمية">
           <button id="addRecipeIngredientBtn" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold">أضف</button>
       </div>
-      <!-- القائمة اللي بتعرض الخامات اللي إنت ضفتها للوصفة -->
       <ul id="recipeList" class="text-xs text-gray-700 max-h-24 overflow-y-auto bg-white rounded border border-gray-200 p-1">
           <li class="p-1 text-center text-gray-400">لم يتم إضافة خامات للوصفة بعد</li>
       </ul>
@@ -283,9 +282,7 @@ const authCreatorClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { au
 let CURRENT_USER = null; 
 let CURRENT_BRANCH_ID = null;
 
-// مصفوفة مؤقتة لتخزين الخامات للوصفة قبل ما تحفظ المنتج كله
 let pendingRecipeIngredients = [];
-// لو مش null، معناه إحنا بنعدل منتج موجود بالفعل، مش بنضيف واحد جديد
 let EDITING_PRODUCT_ID = null;
 
 function escapeHtml(str) {
@@ -396,40 +393,62 @@ document.getElementById("receiptConfirmBtn").addEventListener("click", async () 
   }
 });
 
+
+// ====== سحب الخامات أوتوماتيك وقت الإنتاج ======
 document.getElementById("prodConfirmBtn").addEventListener("click", async () => {
   const prodId = document.getElementById("prodProductSelect").value;
   const qtyText = document.getElementById("prodQtyInput").value;
   const qty = Number(qtyText);
 
-  if(!prodId || !qtyText || isNaN(qty)) return alert("اكتب الكمية المنتجة بأرقام صحيحة!");
+  if(!prodId || !qtyText || isNaN(qty) || qty <= 0) return alert("اكتب الكمية المنتجة بأرقام صحيحة!");
 
   const btn = document.getElementById("prodConfirmBtn");
-  btn.textContent = "جاري الحفظ..."; btn.disabled = true;
+  btn.textContent = "جاري الإنشاء والخصم..."; btn.disabled = true;
 
   try {
+    // 1. تسجيل الإنتاج
     await supabaseClient.from("production_batches").insert({ 
       product_id: prodId, quantity_produced: qty, branch_id: CURRENT_BRANCH_ID, staff_id: CURRENT_USER.id 
     });
 
+    // 2. تزويد رصيد المنتج الجاهز
     await supabaseClient.rpc('add_to_product_stock', {
       p_branch_id: CURRENT_BRANCH_ID,
       p_product_id: prodId,
       p_qty: qty
     });
 
-    alert("تم تسجيل الإنتاج ونزل في الرصيد!");
+    // 3. قراءة الوصفة وخصم الخامات من المخزن
+    const { data: recipe } = await supabaseClient
+        .from("product_ingredients")
+        .select("ingredient_id, quantity_grams")
+        .eq("product_id", prodId);
+
+    if (recipe && recipe.length > 0) {
+        for (let item of recipe) {
+            const totalGramsNeeded = item.quantity_grams * qty;
+            // بنبعت الكمية المطلوبة بالسالب عشان الداتابيز تخصمها من المخزن
+            await supabaseClient.rpc('add_to_ingredient_stock', {
+                p_branch_id: CURRENT_BRANCH_ID,
+                p_ingredient_id: item.ingredient_id,
+                p_qty: -totalGramsNeeded
+            });
+        }
+    }
+
+    alert("تم تسجيل الإنتاج وخصم الخامات من المخزن بنجاح!");
     document.getElementById("modalOverlayBase").classList.remove("open");
     document.getElementById("prodQtyInput").value = "";
     loadProductStock();
+    loadIngredientStock(); // نعمل ريفريش لجدول الخامات عشان نشوف الخصم
   } catch (error) {
-    alert("حدث خطأ أثناء الإنتاج.");
+    alert("حدث خطأ أثناء الإنتاج: " + error.message);
   } finally {
     btn.textContent = "تأكيد"; btn.disabled = false;
   }
 });
 
 
-// === برمجة زرار إضافة خامة لوصفة المنتج ===
 document.getElementById("addRecipeIngredientBtn").addEventListener("click", () => {
     const select = document.getElementById("recipeIngredientSelect");
     const ingId = select.value;
@@ -442,7 +461,6 @@ document.getElementById("addRecipeIngredientBtn").addEventListener("click", () =
         return;
     }
 
-    // التحقق لو الخامة متضافة قبل كده عشان نزود عليها
     const existingIndex = pendingRecipeIngredients.findIndex(i => i.ingredient_id === ingId);
     if(existingIndex >= 0) {
         pendingRecipeIngredients[existingIndex].quantity_grams += qty;
@@ -454,7 +472,6 @@ document.getElementById("addRecipeIngredientBtn").addEventListener("click", () =
     renderPendingRecipe();
 });
 
-// عرض الخامات المتضافة للوصفة
 function renderPendingRecipe() {
     const list = document.getElementById("recipeList");
     if(pendingRecipeIngredients.length === 0) {
@@ -470,15 +487,11 @@ function renderPendingRecipe() {
     `).join("");
 }
 
-// مسح خامة من الوصفة
 window.removePendingIngredient = function(index) {
     pendingRecipeIngredients.splice(index, 1);
     renderPendingRecipe();
 }
 
-// === فتح مودال المنتج، سواء لإضافة منتج جديد أو لتعديل منتج موجود ===
-// لو مبعتش parameter (product = null) هيفتح في وضع "إضافة"
-// لو بعت بيانات منتج (من زرار تعديل) هيفتح في وضع "تعديل" ويجيب الوصفة الحالية من الداتابيز
 async function openProductModal(product = null) {
     document.getElementById("productModalOverlay").classList.add("open");
     pendingRecipeIngredients = [];
@@ -488,7 +501,6 @@ async function openProductModal(product = null) {
     const saveBtn = document.getElementById("productSaveBtn");
 
     if (product) {
-        // ==== وضع التعديل ====
         EDITING_PRODUCT_ID = product.id;
         document.getElementById("newProdName").value = product.name || "";
         document.getElementById("newProdBarcode").value = product.barcode || "";
@@ -496,7 +508,6 @@ async function openProductModal(product = null) {
         titleEl.textContent = "تعديل المنتج ووصفته";
         saveBtn.textContent = "حفظ التعديلات";
 
-        // نجيب الوصفة الحالية للمنتج ده من جدول product_ingredients
         const { data: recipeRows, error } = await supabaseClient
             .from("product_ingredients")
             .select("ingredient_id, quantity_grams, ingredients(name)")
@@ -510,7 +521,6 @@ async function openProductModal(product = null) {
             }));
         }
     } else {
-        // ==== وضع الإضافة ====
         document.getElementById("newProdName").value = "";
         document.getElementById("newProdBarcode").value = "";
         document.getElementById("newProdPrice").value = "";
@@ -521,7 +531,6 @@ async function openProductModal(product = null) {
     renderPendingRecipe();
 }
 
-// === حفظ المنتج مع الوصفة كاملة (إضافة جديد أو تعديل موجود) ===
 document.getElementById("productSaveBtn").addEventListener("click", async () => {
   const name = document.getElementById("newProdName").value;
   const barcode = document.getElementById("newProdBarcode").value;
@@ -538,7 +547,6 @@ document.getElementById("productSaveBtn").addEventListener("click", async () => 
       let productId;
 
       if (EDITING_PRODUCT_ID) {
-          // ==== تحديث منتج موجود بالفعل ====
           const { error: updateError } = await supabaseClient
               .from("products")
               .update({ name: name, barcode: barcode, base_price: price })
@@ -547,14 +555,12 @@ document.getElementById("productSaveBtn").addEventListener("click", async () => 
 
           productId = EDITING_PRODUCT_ID;
 
-          // نمسح الوصفة القديمة بالكامل الأول، عشان نكتب الوصفة الجديدة بدالها بدون تكرار
           const { error: deleteError } = await supabaseClient
               .from("product_ingredients")
               .delete()
               .eq("product_id", productId);
           if (deleteError) throw deleteError;
       } else {
-          // ==== إنشاء منتج جديد من الأول ====
           const { data: newProduct, error: prodError } = await supabaseClient
               .from("products")
               .insert({ name: name, barcode: barcode, base_price: price })
@@ -565,7 +571,6 @@ document.getElementById("productSaveBtn").addEventListener("click", async () => 
           productId = newProduct.id;
       }
 
-      // في الحالتين، لو في وصفة، نحفظها في جدول product_ingredients
       if(pendingRecipeIngredients.length > 0) {
           const recipeItems = pendingRecipeIngredients.map(ing => ({
               product_id: productId,
@@ -580,7 +585,6 @@ document.getElementById("productSaveBtn").addEventListener("click", async () => 
       alert(EDITING_PRODUCT_ID ? "تم تعديل المنتج ووصفته بنجاح!" : "تم حفظ المنتج ووصفته بنجاح!");
       document.getElementById("productModalOverlay").classList.remove("open");
       
-      // تصفير الواجهة
       document.getElementById("newProdName").value = "";
       document.getElementById("newProdBarcode").value = ""; 
       document.getElementById("newProdPrice").value = "";
@@ -690,7 +694,6 @@ async function loadProductsTable() {
   `).join(""); 
 }
 
-// زرار "تعديل" بيجيب بيانات المنتج ووصفته الحالية ويفتحلها المودال
 document.getElementById("productsTableBody").addEventListener("click", async (e) => {
     const btn = e.target.closest(".edit-prod-btn");
     if (!btn) return;
@@ -763,11 +766,9 @@ async function loadOrders() {
     `).join("");
 }
 
-// تعديل طباعة الفاتورة من الإدارة عشان تقرا من الداتابيز
 async function reprintOrder(orderId, receiptNum, customerName, totalAmount) {
     const { data: items } = await supabaseClient.from('order_items').select('quantity, unit_price, products(name)').eq('order_id', orderId);
     
-    // سحب الإعدادات من الداتابيز مباشرة
     const { data: settings } = await supabaseClient.from('branch_settings').select('*').eq('branch_id', CURRENT_BRANCH_ID).maybeSingle();
     
     const nameEn = escapeHtml(settings?.bakery_name || 'مخبز العائلة');
@@ -796,11 +797,9 @@ async function reprintOrder(orderId, receiptNum, customerName, totalAmount) {
     }
 }
 
-// === برمجة مودال الإعدادات ===
 async function openReceiptSettings() {
     document.getElementById('receiptSettingsModal').classList.add("open");
     
-    // جلب الإعدادات من الداتابيز
     const { data, error } = await supabaseClient.from("branch_settings").select("*").eq("branch_id", CURRENT_BRANCH_ID).maybeSingle();
     
     if (data) {
@@ -845,9 +844,12 @@ document.querySelectorAll(".nav-item").forEach(item => {
 
 function openReceiptModal() { document.getElementById("receiptModalOverlay").classList.add("open"); }
 
+// ====== دالة الخروج للديسكتوب ======
 document.getElementById("logoutBtn").addEventListener("click", async () => { 
   await supabaseClient.auth.signOut(); 
-  window.location.href = "index.html"; 
+  window.open('', '_self', ''); 
+  window.close();
+  setTimeout(() => { window.location.href = "index.html"; }, 500);
 });
 
 document.getElementById("ordersTableBody").addEventListener("click", (e) => {
