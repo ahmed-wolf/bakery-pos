@@ -27,7 +27,7 @@
   .modal-overlay.open { display: flex; }
   .modal-content { background: var(--cream); border-radius: 16px; padding: 20px; width: 400px; max-width: 90%; }
   
-  #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); }
+  #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); transition: transform 0.3s ease-in-out; }
   .simple-keyboard { color: #000; font-weight: bold; }
   
   #printArea { display: none; }
@@ -135,11 +135,11 @@
       <div class="flex gap-2 mb-2">
         <div class="flex-1">
           <label class="text-sm font-bold text-gray-400">خصم %</label>
-          <input type="text" inputmode="decimal" id="discountPercent" value="0" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off">
+          <input type="text" inputmode="decimal" id="discountPercent" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off" placeholder="0.00">
         </div>
         <div class="flex-1">
           <label class="text-sm font-bold text-gray-400">خصم (ج)</label>
-          <input type="text" inputmode="decimal" id="discountAmount" value="0" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off">
+          <input type="text" inputmode="decimal" id="discountAmount" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off" placeholder="0.00">
         </div>
       </div>
       
@@ -247,37 +247,55 @@ function getMultiplier() {
   return (isNaN(val) || val <= 0) ? 1 : val; 
 }
 
-// === آلة حاسبة الخصم الموحدة والسريعة ===
-function applyDiscount(type) {
+// === آلة حاسبة الخصم الصاروخية (مضادة لأخطاء التاتش واللاب) ===
+function applyDiscount(source) {
     const pctEl = document.getElementById("discountPercent");
     const amtEl = document.getElementById("discountAmount");
-    let sub = subtotal;
+    let sub = subtotal || 0;
 
-    let pctVal = parseFloat(pctEl.value) || 0;
-    let amtVal = parseFloat(amtEl.value) || 0;
+    let pct = parseFloat(pctEl.value) || 0;
+    let amt = parseFloat(amtEl.value) || 0;
 
-    if (type === 'pct') {
-        if (pctVal > 100) { pctVal = 100; pctEl.value = "100"; }
-        amtVal = sub * (pctVal / 100);
-        // نحدث الخانة التانية فقط عشان منطيرش الكيبورد من الخانة اللي بنكتب فيها
-        if (document.activeElement !== amtEl && selectedInputName !== 'discountAmount') {
-            amtEl.value = (pctEl.value === "") ? "" : amtVal.toFixed(2);
+    if (source === 'pct') {
+        if (pct > 100) { pct = 100; pctEl.value = "100"; }
+        if (pct < 0) { pct = 0; pctEl.value = ""; }
+        
+        amt = sub * (pct / 100);
+        
+        if (pctEl.value === "") {
+            amtEl.value = "";
+            amt = 0;
+        } else {
+            amtEl.value = amt.toFixed(2);
         }
-    } else if (type === 'amt') {
-        if (amtVal > sub) { amtVal = sub; amtEl.value = sub; }
-        pctVal = sub > 0 ? (amtVal / sub) * 100 : 0;
-        // نحدث الخانة التانية فقط
-        if (document.activeElement !== pctEl && selectedInputName !== 'discountPercent') {
-            pctEl.value = (amtEl.value === "") ? "" : pctVal.toFixed(2);
+        
+        if (keyboard && selectedInputName === 'discountPercent') {
+            keyboard.setInput(pctEl.value);
+        }
+    } else if (source === 'amt') {
+        if (amt > sub) { amt = sub; amtEl.value = sub.toString(); }
+        if (amt < 0) { amt = 0; amtEl.value = ""; }
+        
+        pct = sub > 0 ? (amt / sub) * 100 : 0;
+        
+        if (amtEl.value === "") {
+            pctEl.value = "";
+            pct = 0;
+        } else {
+            pctEl.value = pct.toFixed(2);
+        }
+        
+        if (keyboard && selectedInputName === 'discountAmount') {
+            keyboard.setInput(amtEl.value);
         }
     }
 
-    total = sub - parseFloat(amtEl.value || 0);
+    total = sub - amt;
     document.getElementById("subtotalVal").textContent = sub.toFixed(2) + " ج";
     document.getElementById("totalVal").textContent = total.toFixed(2) + " ج";
 }
 
-// تشغيل الحاسبة تلقائياً مع أي تغيير
+// تفعيل الحاسبة مع كيبورد اللاب توب
 document.getElementById("discountPercent").addEventListener("input", () => applyDiscount('pct'));
 document.getElementById("discountAmount").addEventListener("input", () => applyDiscount('amt'));
 
@@ -373,7 +391,6 @@ managerBox.addEventListener("focus", () => {
     showKeyboardWithScroll(managerBox);
 });
 
-// التعامل المباشر مع مربع الإدارة
 managerBox.addEventListener("keydown", (e) => {
     if (e.key >= '0' && e.key <= '9') {
         e.preventDefault();
@@ -394,35 +411,21 @@ document.querySelectorAll('.form-input').forEach(input => {
 
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
-    
-    // مسح الصفر الافتراضي
-    if (e.target.value === "0" || e.target.value === "0.00") {
-        e.target.value = "";
-    }
-
     if(!keyboard) initKeyboard();
     setKeyboardLayout(selectedInputName);
     keyboard.setInput(e.target.value);
     showKeyboardWithScroll(e.target);
   });
-
-  input.addEventListener("input", (e) => {
-     if (keyboard && selectedInputName === e.target.id) {
-         if (keyboard.getInput() !== e.target.value) {
-             keyboard.setInput(e.target.value);
-         }
-     }
-  });
 });
 
-// الدالة النضيفة اللي بتبعت إشارة للسيستم إن الكيبورد التاتش بيكتب
+// === دالة الكيبورد التاتش (بتبعت الإشارة كأنك بتكتب من اللاب) ===
 function onChange(input) {
   if (selectedInputName === 'managerCodeBox') return; 
   
   const el = document.getElementById(selectedInputName);
   if(el) {
       el.value = input;
-      // إرسال الإشارة الإجبارية لتفعيل دوال الخصم والبحث
+      // ضرب إشارة إجبارية للمتصفح عشان يشغل دالة الخصم والبحث
       el.dispatchEvent(new Event('input', { bubbles: true })); 
   }
 }
@@ -670,7 +673,7 @@ function updateCart() {
 
   subtotal = entries.reduce((sum, e) => sum + (e.base_price * e.qty), 0);
   
-  // إعادة حساب الخصم لو السلة اتغيرت
+  // تحديث الخصم فوراً لو السلة اتغيرت
   applyDiscount('pct');
 }
 
