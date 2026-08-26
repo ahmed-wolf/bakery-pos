@@ -22,6 +22,7 @@
   .product-card:active { transform: scale(0.92); box-shadow: none; }
   
   .form-input { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: bold; }
+  .form-select { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: bold; }
 
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; transition: all 0.3s ease; }
   .modal-overlay.open { display: flex; }
@@ -30,7 +31,6 @@
   #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); transition: transform 0.3s ease-in-out; }
   .simple-keyboard { color: #000; font-weight: bold; }
   
- /* Print Styles for Compact Receipt */
   #printArea { display: none; }
   @media print {
     @page { margin: 0; }
@@ -39,8 +39,8 @@
     
     #printArea { 
         display: block; position: absolute; top: 0; left: 0; 
-        width: 72mm; /* عرض البون القياسي */
-        padding: 2mm 5mm 2mm 2mm; /* تظبيط الهوامش عشان الكلام ميتقطش من اليمين */
+        width: 72mm; 
+        padding: 2mm 5mm 2mm 2mm; 
         box-sizing: border-box; direction: rtl;
         background: #fff; color: #000; font-family: 'Tajawal', sans-serif; 
         font-size: 13px; line-height: 1.3;
@@ -55,7 +55,6 @@
     th { border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 3px 1px; font-size: 12px; }
     td { padding: 4px 1px; font-size: 13px; font-weight: bold; border-bottom: 1px dotted #ccc; }
     
-    /* منع الأرقام من النزول لسطر جديد */
     th:nth-child(1), td:nth-child(1) { width: 45%; text-align: right; }
     th:nth-child(2), td:nth-child(2) { width: 20%; text-align: center; white-space: nowrap; }
     th:nth-child(3), td:nth-child(3) { width: 15%; text-align: center; }
@@ -130,16 +129,21 @@
     <div class="p-4 flex-1 overflow-y-auto min-h-[150px]" id="cartList"></div>
     
     <div id="bottomInputsWrapper" class="p-4 shrink-0 transition-all duration-300" style="background: rgba(255,255,255,0.05);">
-      <input type="text" id="customerName" placeholder="👤 اسم العميل (اختياري)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
+      <!-- القائمة الخاصة بعملاء الشركات والجملة -->
+      <select id="b2bClientSelect" class="form-select mb-2 bg-transparent text-white border-gray-500 font-bold" onchange="handleClientChange()">
+          <option value="" class="text-black">-- بيع عادي (بدون شركة) --</option>
+      </select>
+
+      <input type="text" id="customerName" placeholder="👤 اسم العميل / المستلم (اختياري)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
       <input type="text" id="orderNotes" placeholder="📝 ملاحظات (مثال: خصم ضيافة)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
       
       <div class="flex gap-2 mb-2">
         <div class="flex-1">
-          <label class="text-sm font-bold text-gray-400">خصم %</label>
+          <label class="text-sm font-bold text-gray-400">خصم % إضافي</label>
           <input type="text" inputmode="decimal" id="discountPercent" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off" placeholder="0.00">
         </div>
         <div class="flex-1">
-          <label class="text-sm font-bold text-gray-400">خصم (ج)</label>
+          <label class="text-sm font-bold text-gray-400">خصم (ج) إضافي</label>
           <input type="text" inputmode="decimal" id="discountAmount" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off" placeholder="0.00">
         </div>
       </div>
@@ -174,11 +178,9 @@
   <div class="modal-content text-black">
     <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
     <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
-    
     <div id="managerCodeBox" tabindex="0" class="form-input text-3xl text-center py-3 mb-4 h-14 flex items-center justify-center cursor-pointer bg-white border border-gray-300 rounded-lg select-none outline-none focus:ring-2 focus:ring-teal-500">
         <span id="fakeDotsDisplay" class="text-gray-400 text-lg">••••</span>
     </div>
-    
     <div class="flex gap-2">
         <button onclick="executeShiftSales()" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors">تأكيد</button>
         <button onclick="closeAdminModal()" class="flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">إلغاء</button>
@@ -190,7 +192,7 @@
   <div class="modal-content text-black">
     <div class="text-3xl text-center mb-2">🔓</div>
     <h3 class="font-bold text-xl mb-2 text-center">بداية الوردية</h3>
-    <p class="text-sm text-gray-600 mb-4 text-center">أدخل العهدة الافتتاحية (النقدية الموجودة في الدرج حالياً) لفتح الوردية.</p>
+    <p class="text-sm text-gray-600 mb-4 text-center">أدخل العهدة الافتتاحية لفتح الوردية.</p>
     <input type="text" inputmode="decimal" id="startShiftCashInput" class="form-input text-2xl text-center py-4 mt-2 mb-4 font-bold" placeholder="0.00" autocomplete="off">
     <button id="confirmStartShiftBtn" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors">✓ ابدأ الوردية</button>
   </div>
@@ -199,8 +201,8 @@
 <div id="endShiftModal" class="modal-overlay">
   <div class="modal-content text-black">
     <h3 class="font-bold text-xl mb-4 text-center">تقفيل الوردية</h3>
-    <p class="text-sm text-gray-600 mb-4 text-center">النظام هيحسب مبيعاتك ويطبعلك تقرير الوردية (Z-Report).</p>
-    <label class="font-bold text-sm">النقدية الفعلية في الدرج (الجرد)</label>
+    <p class="text-sm text-gray-600 mb-4 text-center">أدخل الجرد الفعلي للدرج لإنهاء الوردية وطباعة التقرير.</p>
+    <label class="font-bold text-sm">النقدية الفعلية (الجرد)</label>
     <input type="text" inputmode="decimal" id="actualCashInput" class="form-input text-xl text-center py-3 mt-2 mb-4" placeholder="0.00" autocomplete="off">
     <button id="confirmEndShiftBtn" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors">تأكيد الإغلاق وطباعة التقرير</button>
     <button onclick="closeEndShiftModal()" class="w-full py-2 mt-2 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition-colors">إلغاء</button>
@@ -220,20 +222,18 @@ let subtotal = 0; let total = 0;
 let EDITING_ORDER_ID = null;
 let EDITING_RECEIPT_NUM = null;
 
-let branchSettings = {
-    bakery_name: "مخبز العائلة",
-    logo_url: "",
-    welcome_message: "شكراً لزيارتكم"
-};
+let branchSettings = { bakery_name: "مخبز العائلة", logo_url: "", welcome_message: "شكراً لزيارتكم" };
+
+// متغيرات الـ B2B
+let b2bClients = [];
+let activeClientPrices = {}; // { product_id: custom_price }
 
 let currentMultiplierStr = "";
 
 function appendMultiplier(num) {
   if (currentMultiplierStr.length > 5) return; 
   if (num === '.' && currentMultiplierStr.includes('.')) return; 
-  if (num === '.' && currentMultiplierStr === "") {
-      currentMultiplierStr = "0";
-  }
+  if (num === '.' && currentMultiplierStr === "") currentMultiplierStr = "0";
   currentMultiplierStr += num.toString();
   document.getElementById('multiplierDisplay').textContent = currentMultiplierStr;
 }
@@ -248,7 +248,7 @@ function getMultiplier() {
   return (isNaN(val) || val <= 0) ? 1 : val; 
 }
 
-// === آلة حاسبة الخصم ===
+// === آلة حاسبة الخصم الإجبارية ===
 function applyDiscount(source) {
     const pctEl = document.getElementById("discountPercent");
     const amtEl = document.getElementById("discountAmount");
@@ -264,12 +264,9 @@ function applyDiscount(source) {
         amt = sub * (pct / 100);
         
         if (pctEl.value === "") {
-            amtEl.value = "";
-            numericBuffers.discountAmount = "";
-            amt = 0;
+            amtEl.value = ""; numericBuffers.discountAmount = ""; amt = 0;
         } else {
-            amtEl.value = amt.toFixed(2);
-            numericBuffers.discountAmount = amtEl.value;
+            amtEl.value = amt.toFixed(2); numericBuffers.discountAmount = amtEl.value;
         }
     } else if (source === 'amt') {
         if (amt > sub) { amt = sub; amtEl.value = sub.toString(); numericBuffers.discountAmount = amtEl.value; }
@@ -278,12 +275,9 @@ function applyDiscount(source) {
         pct = sub > 0 ? (amt / sub) * 100 : 0;
         
         if (amtEl.value === "") {
-            pctEl.value = "";
-            numericBuffers.discountPercent = "";
-            pct = 0;
+            pctEl.value = ""; numericBuffers.discountPercent = ""; pct = 0;
         } else {
-            pctEl.value = pct.toFixed(2);
-            numericBuffers.discountPercent = pctEl.value;
+            pctEl.value = pct.toFixed(2); numericBuffers.discountPercent = pctEl.value;
         }
     }
 
@@ -292,14 +286,11 @@ function applyDiscount(source) {
     document.getElementById("totalVal").textContent = total.toFixed(2) + " ج";
 }
 
-// تفعيل الحاسبة مع كيبورد اللاب توب
 document.getElementById("discountPercent").addEventListener("input", (e) => {
-    numericBuffers.discountPercent = e.target.value;
-    applyDiscount('pct');
+    numericBuffers.discountPercent = e.target.value; applyDiscount('pct');
 });
 document.getElementById("discountAmount").addEventListener("input", (e) => {
-    numericBuffers.discountAmount = e.target.value;
-    applyDiscount('amt');
+    numericBuffers.discountAmount = e.target.value; applyDiscount('amt');
 });
 document.getElementById("startShiftCashInput").addEventListener("input", (e) => {
     numericBuffers.startShiftCashInput = e.target.value;
@@ -307,7 +298,6 @@ document.getElementById("startShiftCashInput").addEventListener("input", (e) => 
 document.getElementById("actualCashInput").addEventListener("input", (e) => {
     numericBuffers.actualCashInput = e.target.value;
 });
-
 
 // === إعدادات الكيبورد الذكي ===
 let keyboard;
@@ -320,11 +310,8 @@ function applyBufferToField(fieldId) {
     const el = document.getElementById(fieldId);
     if (!el) return;
     el.value = numericBuffers[fieldId];
-    if (fieldId === 'discountPercent') {
-        applyDiscount('pct');
-    } else if (fieldId === 'discountAmount') {
-        applyDiscount('amt');
-    }
+    if (fieldId === 'discountPercent') applyDiscount('pct');
+    else if (fieldId === 'discountAmount') applyDiscount('amt');
 }
 
 const layoutArabic = {
@@ -337,44 +324,32 @@ const layoutArabic = {
   ]
 };
 
-const layoutNumpad = {
-  default: ["1 2 3", "4 5 6", "7 8 9", ". 0 {bksp}", "{enter}"]
-};
+const layoutNumpad = { default: ["1 2 3", "4 5 6", "7 8 9", ". 0 {bksp}", "{enter}"] };
 
 function initKeyboard() {
   keyboard = new window.SimpleKeyboard.default({
     onChange: input => onChange(input),
     onKeyPress: button => onKeyPress(button),
     layout: layoutArabic,
-    display: {
-        '{bksp}': 'مسح ⌫',
-        '{enter}': 'تأكيد ↵',
-        '{space}': 'مسافة'
-    },
+    display: { '{bksp}': 'مسح ⌫', '{enter}': 'تأكيد ↵', '{space}': 'مسافة' },
     rtl: true
   });
 }
 
 function setKeyboardLayout(inputId) {
     if(!keyboard) return;
-    if (numericFieldIds.includes(inputId)) {
-        keyboard.setOptions({ layout: layoutNumpad });
-    } else {
-        keyboard.setOptions({ layout: layoutArabic });
-    }
+    if (numericFieldIds.includes(inputId)) keyboard.setOptions({ layout: layoutNumpad });
+    else keyboard.setOptions({ layout: layoutArabic });
 }
 
 function showKeyboardWithScroll(element) {
     document.getElementById("keyboardWrapper").classList.remove("hidden");
     const modal = element.closest('.modal-overlay');
     if (modal) {
-        modal.style.alignItems = 'flex-start';
-        modal.style.paddingTop = '30px'; 
+        modal.style.alignItems = 'flex-start'; modal.style.paddingTop = '30px'; 
     } else {
         document.getElementById("bottomInputsWrapper").style.paddingBottom = "280px";
-        setTimeout(() => {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 150);
+        setTimeout(() => { element.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
     }
 }
 
@@ -382,66 +357,49 @@ function closeKeyboard() {
     document.getElementById("keyboardWrapper").classList.add("hidden");
     document.getElementById("bottomInputsWrapper").style.paddingBottom = "0px";
     document.querySelectorAll('.modal-overlay').forEach(m => {
-        m.style.alignItems = 'center';
-        m.style.paddingTop = '0px';
+        m.style.alignItems = 'center'; m.style.paddingTop = '0px';
     });
 }
 
 let managerPassString = "";
-
 function updateFakeDots(val) {
     const display = document.getElementById("fakeDotsDisplay");
     if (val && val.length > 0) {
-        display.textContent = '•'.repeat(val.length);
-        display.className = "text-gray-900 text-3xl tracking-[0.3em]"; 
+        display.textContent = '•'.repeat(val.length); display.className = "text-gray-900 text-3xl tracking-[0.3em]"; 
     } else {
-        display.textContent = '••••';
-        display.className = "text-gray-400 text-lg tracking-normal"; 
+        display.textContent = '••••'; display.className = "text-gray-400 text-lg tracking-normal"; 
     }
 }
 
 const managerBox = document.getElementById("managerCodeBox");
-
-managerBox.addEventListener("click", () => {
-    managerBox.focus();
-});
-
+managerBox.addEventListener("click", () => managerBox.focus());
 managerBox.addEventListener("focus", () => {
     selectedInputName = 'managerCodeBox';
     if(!keyboard) initKeyboard();
     keyboard.setOptions({ layout: layoutNumpad });
     showKeyboardWithScroll(managerBox);
 });
-
 managerBox.addEventListener("keydown", (e) => {
     if (e.key >= '0' && e.key <= '9') {
-        e.preventDefault();
-        managerPassString += e.key;
-        updateFakeDots(managerPassString);
+        e.preventDefault(); managerPassString += e.key; updateFakeDots(managerPassString);
     } else if (e.key === 'Backspace') {
-        e.preventDefault();
-        managerPassString = managerPassString.slice(0, -1);
-        updateFakeDots(managerPassString);
+        e.preventDefault(); managerPassString = managerPassString.slice(0, -1); updateFakeDots(managerPassString);
     } else if (e.key === 'Enter') {
-        e.preventDefault();
-        executeShiftSales();
+        e.preventDefault(); executeShiftSales();
     }
 });
 
 document.querySelectorAll('.form-input').forEach(input => {
   if (input.id === 'managerCodeBox') return; 
-
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
     if(!keyboard) initKeyboard();
     setKeyboardLayout(selectedInputName);
-
     if (numericFieldIds.includes(selectedInputName)) {
         numericBuffers[selectedInputName] = e.target.value || "";
     } else {
         keyboard.setInput(e.target.value);
     }
-
     showKeyboardWithScroll(e.target);
   });
 });
@@ -449,7 +407,6 @@ document.querySelectorAll('.form-input').forEach(input => {
 function onChange(input) {
   if (selectedInputName === 'managerCodeBox') return; 
   if (numericFieldIds.includes(selectedInputName)) return; 
-  
   const el = document.getElementById(selectedInputName);
   if(el) {
       el.value = input;
@@ -459,40 +416,26 @@ function onChange(input) {
 
 function onKeyPress(button) {
   if (selectedInputName === 'managerCodeBox') {
-      if (button === '{bksp}') {
-          managerPassString = managerPassString.slice(0, -1);
-      } else if (button === '{enter}') {
-          executeShiftSales();
-          return;
-      } else if (/^[0-9]$/.test(button)) {
-          managerPassString += button;
-      }
+      if (button === '{bksp}') managerPassString = managerPassString.slice(0, -1);
+      else if (button === '{enter}') { executeShiftSales(); return; }
+      else if (/^[0-9]$/.test(button)) managerPassString += button;
       updateFakeDots(managerPassString);
       return;
   }
 
-  // === الخانات الرقمية ===
   if (numericFieldIds.includes(selectedInputName)) {
       let buf = numericBuffers[selectedInputName] || "";
-
-      if (button === '{bksp}') {
-          buf = buf.slice(0, -1);
-      } else if (button === '.') {
-          if (!buf.includes('.')) buf += '.';
-      } else if (/^[0-9]$/.test(button)) {
-          buf += button;
-      } else if (button === '{enter}') {
+      if (button === '{bksp}') buf = buf.slice(0, -1);
+      else if (button === '.') { if (!buf.includes('.')) buf += '.'; }
+      else if (/^[0-9]$/.test(button)) buf += button;
+      else if (button === '{enter}') {
           numericBuffers[selectedInputName] = buf;
           applyBufferToField(selectedInputName);
-          if (selectedInputName === 'startShiftCashInput') {
-              document.getElementById("confirmStartShiftBtn").click();
-          } else if (selectedInputName === 'actualCashInput') {
-              document.getElementById("confirmEndShiftBtn").click();
-          }
+          if (selectedInputName === 'startShiftCashInput') document.getElementById("confirmStartShiftBtn").click();
+          else if (selectedInputName === 'actualCashInput') document.getElementById("confirmEndShiftBtn").click();
           closeKeyboard();
           return;
       }
-
       numericBuffers[selectedInputName] = buf;
       applyBufferToField(selectedInputName);
       return;
@@ -500,18 +443,14 @@ function onKeyPress(button) {
 
   if (button === "{enter}") {
       const el = document.getElementById(selectedInputName);
-      if(el && selectedInputName === "productSearch") {
-          el.dispatchEvent(new KeyboardEvent('keypress', {key: 'Enter'})); 
-      }
+      if(el && selectedInputName === "productSearch") el.dispatchEvent(new KeyboardEvent('keypress', {key: 'Enter'})); 
       closeKeyboard();
   }
 }
 
 function openShiftSalesModal() {
     document.getElementById('adminPassModal').classList.add("open");
-    managerPassString = "";
-    updateFakeDots("");
-    
+    managerPassString = ""; updateFakeDots("");
     selectedInputName = 'managerCodeBox';
     if(!keyboard) initKeyboard();
     keyboard.setOptions({ layout: layoutNumpad });
@@ -519,66 +458,37 @@ function openShiftSalesModal() {
     document.getElementById('managerCodeBox').focus();
 }
 
-function closeAdminModal() {
-    document.getElementById('adminPassModal').classList.remove("open");
-    closeKeyboard();
-    managerPassString = "";
-}
-
-function closeEndShiftModal() {
-    document.getElementById('endShiftModal').classList.remove('open');
-    closeKeyboard();
-}
+function closeAdminModal() { document.getElementById('adminPassModal').classList.remove("open"); closeKeyboard(); managerPassString = ""; }
+function closeEndShiftModal() { document.getElementById('endShiftModal').classList.remove('open'); closeKeyboard(); }
 
 async function executeShiftSales() {
     if (managerPassString !== "2005") {
         if(managerPassString) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
-        managerPassString = "";
-        updateFakeDots("");
-        return;
+        managerPassString = ""; updateFakeDots(""); return;
     }
-    
     closeAdminModal();
-    
     try {
-        const { data: orders } = await supabaseClient.from("orders")
-            .select("total_amount")
-            .eq("cashier_id", CURRENT_USER.id)
-            .gte("created_at", CURRENT_SHIFT.opened_at);
-            
+        const { data: orders } = await supabaseClient.from("orders").select("total_amount").eq("cashier_id", CURRENT_USER.id).gte("created_at", CURRENT_SHIFT.opened_at);
         const shiftTotal = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-        
         alert(`💰 مبيعات الشيفت الحالية: ${shiftTotal.toFixed(2)} ج\n💵 العهدة الافتتاحية: ${Number(CURRENT_SHIFT.opening_cash).toFixed(2)} ج\n\n📊 الإجمالي المتوقع بالدرج: ${(shiftTotal + Number(CURRENT_SHIFT.opening_cash)).toFixed(2)} ج`);
-    } catch (err) {
-        alert("حدث خطأ في جلب البيانات.");
-    }
+    } catch (err) { alert("حدث خطأ في جلب البيانات."); }
 }
 
 async function quickLogout() {
     if(confirm("هل أنت متأكد أنك تريد الخروج السريع (لن يتم إغلاق الوردية وسيتم حفظ المبيعات)؟")) {
-        // تسجيل الخروج من الداتابيز الأول
         await supabaseClient.auth.signOut();
-        
-        // محاولة إغلاق الشاشة للرجوع للديسكتوب
-        window.open('', '_self', ''); 
-        window.close();
-        
-        // لو المتصفح منع الإغلاق (حماية أمنية)، هنرجعه لشاشة الدخول كبديل بعد نص ثانية
-        setTimeout(() => {
-            window.location.href = "index.html";
-        }, 500);
+        window.open('', '_self', ''); window.close();
+        setTimeout(() => { window.location.href = "index.html"; }, 500);
     }
 }
+
 function escapeHtml(str) {
   if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  const div = document.createElement('div'); div.textContent = str; return div.innerHTML;
 }
 
 function openDrawer() {
-  document.getElementById("printArea").innerHTML = "";
-  window.print();
+  document.getElementById("printArea").innerHTML = ""; window.print();
 }
 
 async function init() {
@@ -589,9 +499,7 @@ async function init() {
   const { data: staff } = await supabaseClient.from("staff").select("branch_id, full_name, role").eq("id", CURRENT_USER.id).single();
   CURRENT_BRANCH = staff.branch_id;
 
-  if (staff.role === 'admin') {
-    document.getElementById('returnAdminBtn').classList.remove('hidden');
-  }
+  if (staff.role === 'admin') document.getElementById('returnAdminBtn').classList.remove('hidden');
 
   const { data: settings } = await supabaseClient.from("branch_settings").select("*").eq("branch_id", CURRENT_BRANCH).maybeSingle();
   if (settings) {
@@ -601,41 +509,70 @@ async function init() {
   }
 
   const { data: shift } = await supabaseClient.from("cashier_shifts").select("*").eq("staff_id", CURRENT_USER.id).eq("status", "open").maybeSingle();
-  if(!shift) { 
-    document.getElementById("startShiftModal").classList.add("open");
-    return; 
-  }
+  if(!shift) { document.getElementById("startShiftModal").classList.add("open"); return; }
   
   CURRENT_SHIFT = shift;
+  
+  // تحميل قائمة عملاء الشركات
+  await loadB2BClients();
   await loadProducts();
 }
 
 document.getElementById("confirmStartShiftBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmStartShiftBtn");
   const openingCash = document.getElementById("startShiftCashInput").value;
-  
-  if(openingCash === "" || isNaN(openingCash) || Number(openingCash) < 0) { 
-    alert("برجاء إدخال العهدة الافتتاحية بشكل صحيح!"); 
-    return; 
-  }
+  if(openingCash === "" || isNaN(openingCash) || Number(openingCash) < 0) return alert("برجاء إدخال العهدة الافتتاحية بشكل صحيح!"); 
 
-  btn.disabled = true;
-  btn.textContent = "جاري فتح الوردية...";
+  btn.disabled = true; btn.textContent = "جاري فتح الوردية...";
 
   const { data, error } = await supabaseClient.from("cashier_shifts").insert({
     branch_id: CURRENT_BRANCH, staff_id: CURRENT_USER.id, opening_cash: parseFloat(openingCash), status: "open"
   }).select().single();
 
-  if(error) { 
-    alert("حدث خطأ في فتح الوردية!"); 
-    btn.disabled = false; btn.textContent = "✓ ابدأ الوردية"; return; 
-  }
+  if(error) { alert("حدث خطأ في فتح الوردية!"); btn.disabled = false; btn.textContent = "✓ ابدأ الوردية"; return; }
 
   CURRENT_SHIFT = data;
-  document.getElementById("startShiftModal").classList.remove("open");
-  closeKeyboard();
+  document.getElementById("startShiftModal").classList.remove("open"); closeKeyboard();
+  await loadB2BClients();
   await loadProducts();
 });
+
+// === أكواد البزنس والشركات (B2B) ===
+async function loadB2BClients() {
+    const { data } = await supabaseClient.from("clients").select("*").eq("branch_id", CURRENT_BRANCH);
+    b2bClients = data || [];
+    const select = document.getElementById("b2bClientSelect");
+    select.innerHTML = '<option value="" class="text-black">-- بيع عادي (بدون شركة) --</option>' + 
+        b2bClients.map(c => `<option value="${c.id}" class="text-black">${escapeHtml(c.name)}</option>`).join("");
+}
+
+async function handleClientChange() {
+    const clientId = document.getElementById("b2bClientSelect").value;
+    activeClientPrices = {}; // تصفير الأسعار الخاصة
+
+    if (clientId) {
+        // لو اختار شركة، نجيب أسعارها المخصصة
+        const { data } = await supabaseClient.from("client_prices").select("product_id, custom_price").eq("client_id", clientId);
+        if (data) {
+            data.forEach(item => {
+                activeClientPrices[item.product_id] = item.custom_price;
+            });
+        }
+    }
+    
+    // إعادة رسم المنتجات عشان تظهر بالأسعار الجديدة
+    renderProducts();
+
+    // تحديث أسعار المنتجات اللي في السلة أوتوماتيك
+    for (let id in cart) {
+        let p = products.find(x => x.id === id);
+        if (p) {
+            let currentPrice = activeClientPrices[p.id] !== undefined ? activeClientPrices[p.id] : p.base_price;
+            cart[id].base_price = currentPrice;
+        }
+    }
+    updateCart();
+}
 
 async function loadProducts() {
   const { data } = await supabaseClient.from("products").select("*").eq("is_active", true);
@@ -648,32 +585,33 @@ function renderProducts() {
   const search = document.getElementById("productSearch").value.toLowerCase();
   const filtered = products.filter(p => p.name.toLowerCase().includes(search) || (p.barcode && p.barcode.includes(search)));
   
-  const cardColors = [
-      'bg-blue-100 border-blue-400', 
-      'bg-green-100 border-green-400', 
-      'bg-yellow-100 border-yellow-400', 
-      'bg-pink-100 border-pink-400', 
-      'bg-purple-100 border-purple-400',
-      'bg-orange-100 border-orange-400'
-  ];
+  const cardColors = ['bg-blue-100 border-blue-400', 'bg-green-100 border-green-400', 'bg-yellow-100 border-yellow-400', 'bg-pink-100 border-pink-400', 'bg-purple-100 border-purple-400', 'bg-orange-100 border-orange-400'];
 
   grid.innerHTML = filtered.map((p, index) => {
     const colorScheme = cardColors[index % cardColors.length];
+    
+    // سحب السعر المخصص لو الشركة ليها سعر للمنتج ده
+    let displayPrice = activeClientPrices[p.id] !== undefined ? activeClientPrices[p.id] : p.base_price;
+    let isDiscounted = activeClientPrices[p.id] !== undefined && activeClientPrices[p.id] < p.base_price;
+    
+    let priceHtml = isDiscounted 
+        ? `<span class="line-through text-red-500 text-sm ml-1">${Number(p.base_price).toFixed(2)}</span> <span class="text-green-700">${Number(displayPrice).toFixed(2)} ج</span>`
+        : `${Number(displayPrice).toFixed(2)} ج`;
+
     return `
-    <div onclick="addToCart('${p.id}')" class="product-card ${colorScheme} border-2 p-4 rounded-2xl text-center flex flex-col justify-center items-center shadow-md min-h-[110px]">
+    <div onclick="addToCart('${p.id}')" class="product-card ${colorScheme} border-2 p-4 rounded-2xl text-center flex flex-col justify-center items-center shadow-md min-h-[110px] relative">
+      ${isDiscounted ? '<span class="absolute top-1 right-1 text-xs bg-red-500 text-white px-1 rounded">سعر شركة</span>' : ''}
       <div class="font-extrabold text-xl text-gray-900 mb-2 leading-tight">${escapeHtml(p.name)}</div>
-      <div class="text-gray-900 font-extrabold text-lg bg-white bg-opacity-70 rounded-xl py-1 px-4 shadow-sm">${Number(p.base_price).toFixed(2)} ج</div>
+      <div class="text-gray-900 font-extrabold text-lg bg-white bg-opacity-70 rounded-xl py-1 px-4 shadow-sm" dir="ltr">${priceHtml}</div>
     </div>
   `}).join("");
 }
 
 document.getElementById("productSearch").addEventListener("input", renderProducts);
-
 document.getElementById("productSearch").addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
     const scanVal = e.target.value.trim();
     if (!scanVal) return;
-
     if (scanVal.length === 13 && scanVal.startsWith("23")) {
       const itemCode = scanVal.substring(2, 7); 
       const weightInGrams = scanVal.substring(7, 12); 
@@ -681,36 +619,32 @@ document.getElementById("productSearch").addEventListener("keypress", (e) => {
 
       const p = products.find(x => x.barcode === itemCode);
       if (p) {
+        // تحديد السعر الفعلي
+        let currentPrice = activeClientPrices[p.id] !== undefined ? activeClientPrices[p.id] : p.base_price;
         if(cart[p.id]) cart[p.id].qty += weightInKg; 
-        else cart[p.id] = { ...p, qty: weightInKg };
+        else cart[p.id] = { ...p, qty: weightInKg, base_price: currentPrice };
         
-        updateCart(); e.target.value = ""; renderProducts(); 
-        clearMultiplier();
-        return;
+        updateCart(); e.target.value = ""; renderProducts(); clearMultiplier(); return;
       }
     }
-
     const normalProduct = products.find(x => x.barcode === scanVal);
-    if (normalProduct) {
-      addToCart(normalProduct.id); e.target.value = ""; renderProducts();
-    } else {
-      alert("المنتج ده مش متسجل في السيستم!"); e.target.value = "";
-    }
+    if (normalProduct) { addToCart(normalProduct.id); e.target.value = ""; renderProducts(); } 
+    else { alert("المنتج ده مش متسجل في السيستم!"); e.target.value = ""; }
   }
 });
 
 function addToCart(id) {
   const p = products.find(x => x.id === id);
   const qtyToAdd = getMultiplier();
+  let currentPrice = activeClientPrices[id] !== undefined ? activeClientPrices[id] : p.base_price;
   
   if(cart[id]) {
       cart[id].qty += qtyToAdd; 
   } else {
-      cart[id] = { ...p, qty: qtyToAdd };
+      cart[id] = { ...p, qty: qtyToAdd, base_price: currentPrice };
   }
   
-  updateCart();
-  clearMultiplier();
+  updateCart(); clearMultiplier();
 }
 
 function updateCart() {
@@ -730,8 +664,6 @@ function updateCart() {
   `).join("");
 
   subtotal = entries.reduce((sum, e) => sum + (e.base_price * e.qty), 0);
-  
-  // تحديث الخصم فوراً لو السلة اتغيرت
   applyDiscount('pct');
 }
 
@@ -741,35 +673,37 @@ function resetCartUI() {
   document.getElementById("orderNotes").value = "";
   document.getElementById("discountPercent").value = ""; 
   document.getElementById("discountAmount").value = ""; 
-  numericBuffers.discountPercent = "";
-  numericBuffers.discountAmount = "";
-  updateCart();
-  clearMultiplier();
   
-  EDITING_ORDER_ID = null;
-  EDITING_RECEIPT_NUM = null;
+  // تصفير الشركة
+  document.getElementById("b2bClientSelect").value = "";
+  handleClientChange();
+
+  numericBuffers.discountPercent = ""; numericBuffers.discountAmount = "";
+  updateCart(); clearMultiplier();
+  EDITING_ORDER_ID = null; EDITING_RECEIPT_NUM = null;
   
   const btn = document.getElementById("checkoutBtn");
-  btn.disabled = false;
-  btn.innerHTML = "تأكيد وطباعة 🖨️";
+  btn.disabled = false; btn.innerHTML = "تأكيد وطباعة 🖨️";
   btn.className = "w-full py-4 rounded-2xl font-black text-xl bg-green-600 text-white hover:bg-green-700 mb-2 transition-colors";
 }
 
-document.getElementById("cancelBtn").addEventListener("click", () => {
-    resetCartUI();
-    closeKeyboard();
-});
+document.getElementById("cancelBtn").addEventListener("click", () => { resetCartUI(); closeKeyboard(); });
 
 document.getElementById("checkoutBtn").addEventListener("click", async () => {
   const entries = Object.values(cart);
   if(entries.length === 0) return alert("السلة فاضية!");
   
   const btn = document.getElementById("checkoutBtn");
-  btn.disabled = true;
-  btn.innerHTML = "جاري الحفظ والطباعة... ⏳";
+  btn.disabled = true; btn.innerHTML = "جاري الحفظ والطباعة... ⏳";
   btn.className = "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-gray-500";
 
-  const custName = document.getElementById("customerName").value || "عميل نقدي";
+  // سحب اسم الشركة لو تم اختيارها، أو اسم العميل اليدوي
+  const selectEl = document.getElementById("b2bClientSelect");
+  const selectedCompanyName = selectEl.options[selectEl.selectedIndex].text;
+  let custName = document.getElementById("customerName").value;
+  if (!custName && selectEl.value) { custName = selectedCompanyName; } // لو مأدخلش اسم عميل يدوي، حط اسم الشركة
+  else if (!custName) { custName = "عميل نقدي"; }
+
   const notes = document.getElementById("orderNotes").value;
   const dPct = parseFloat(document.getElementById("discountPercent").value) || 0;
   const dAmt = parseFloat(document.getElementById("discountAmount").value) || 0;
@@ -781,89 +715,67 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
     if (EDITING_ORDER_ID) {
         const { error: updateError } = await supabaseClient.from("orders").update({
             total_amount: total, customer_name: custName, notes: notes, 
-            discount_percentage: dPct, discount_amount: dAmt
+            discount_percentage: dPct, discount_amount: dAmt,
+            client_id: selectEl.value || null // حفظ الـ ID بتاع الشركة لو في
         }).eq("id", EDITING_ORDER_ID);
         if(updateError) throw updateError;
         
         targetOrderId = EDITING_ORDER_ID;
-        
         await supabaseClient.from("order_items").delete().eq("order_id", targetOrderId);
     } else {
         const { data: order, error } = await supabaseClient.from("orders").insert({
           branch_id: CURRENT_BRANCH, cashier_id: CURRENT_USER.id, receipt_number: receiptNum,
           total_amount: total, customer_name: custName, notes: notes, 
-          discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash'
+          discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash',
+          client_id: selectEl.value || null // حفظ الـ ID بتاع الشركة لو في
         }).select().single();
         if(error) throw error;
         
         targetOrderId = order.id;
     }
 
-    const orderItems = entries.map(e => ({
-      order_id: targetOrderId, product_id: e.id, quantity: e.qty, unit_price: e.base_price
-    }));
+    const orderItems = entries.map(e => ({ order_id: targetOrderId, product_id: e.id, quantity: e.qty, unit_price: e.base_price }));
     const { error: itemsError } = await supabaseClient.from("order_items").insert(orderItems);
     if(itemsError) throw itemsError;
 
     printReceipt(receiptNum, entries, custName, notes, dAmt);
-    
-    resetCartUI();
-    closeKeyboard();
+    resetCartUI(); closeKeyboard();
 
   } catch (err) {
     alert("حدث خطأ أثناء الحفظ، يرجى المحاولة تاني!");
-    btn.disabled = false;
-    btn.innerHTML = EDITING_ORDER_ID ? "حفظ التعديل وطباعة 🖨️" : "تأكيد وطباعة 🖨️";
-    btn.className = EDITING_ORDER_ID ? 
-        "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-indigo-600 hover:bg-indigo-700" : 
-        "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-green-600 hover:bg-green-700";
+    btn.disabled = false; btn.innerHTML = EDITING_ORDER_ID ? "حفظ التعديل وطباعة 🖨️" : "تأكيد وطباعة 🖨️";
+    btn.className = EDITING_ORDER_ID ? "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-indigo-600 hover:bg-indigo-700" : "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-green-600 hover:bg-green-700";
   }
 });
 
-function openEditOrderModal() {
-    document.getElementById('editOrderModal').classList.add("open");
-    document.getElementById('searchReceiptInput').value = "";
-    document.getElementById('searchReceiptInput').focus();
-}
-
-function closeEditOrderModal() {
-    document.getElementById('editOrderModal').classList.remove("open");
-    closeKeyboard();
-}
+function openEditOrderModal() { document.getElementById('editOrderModal').classList.add("open"); document.getElementById('searchReceiptInput').value = ""; document.getElementById('searchReceiptInput').focus(); }
+function closeEditOrderModal() { document.getElementById('editOrderModal').classList.remove("open"); closeKeyboard(); }
 
 async function searchOrderForEdit() {
     const receiptNum = document.getElementById('searchReceiptInput').value.trim();
     if(!receiptNum) return alert("اكتب رقم الفاتورة الأول!");
-
-    const btn = document.getElementById('searchOrderBtn');
-    btn.disabled = true; btn.textContent = "جاري البحث...";
+    const btn = document.getElementById('searchOrderBtn'); btn.disabled = true; btn.textContent = "جاري البحث...";
 
     try {
-        const { data: order, error: orderError } = await supabaseClient
-            .from("orders")
-            .select("*")
-            .eq("receipt_number", receiptNum)
-            .single();
-        
+        const { data: order, error: orderError } = await supabaseClient.from("orders").select("*").eq("receipt_number", receiptNum).single();
         if(orderError || !order) throw new Error("الفاتورة دي مش موجودة أو الرقم غلط!");
 
-        const { data: items, error: itemsError } = await supabaseClient
-            .from("order_items")
-            .select("*, products(*)")
-            .eq("order_id", order.id);
-
+        const { data: items, error: itemsError } = await supabaseClient.from("order_items").select("*, products(*)").eq("order_id", order.id);
         if(itemsError) throw itemsError;
 
         cart = {};
         items.forEach(item => {
-            cart[item.product_id] = {
-                id: item.product_id,
-                name: item.products.name,
-                base_price: item.unit_price,
-                qty: item.quantity,
-                barcode: item.products.barcode
-            };
+            cart[item.product_id] = { id: item.product_id, name: item.products.name, base_price: item.unit_price, qty: item.quantity, barcode: item.products.barcode };
         });
+
+        // استرجاع اسم الشركة لو كانت متسجلة باسمها
+        if (order.client_id) {
+            document.getElementById("b2bClientSelect").value = order.client_id;
+            await handleClientChange(); // عشان يسحب الأسعار الخاصة ويعرضها صح
+        } else {
+            document.getElementById("b2bClientSelect").value = "";
+            await handleClientChange();
+        }
 
         document.getElementById("customerName").value = order.customer_name === "عميل نقدي" ? "" : (order.customer_name || "");
         document.getElementById("orderNotes").value = order.notes || "";
@@ -872,53 +784,32 @@ async function searchOrderForEdit() {
         numericBuffers.discountPercent = document.getElementById("discountPercent").value;
         numericBuffers.discountAmount = document.getElementById("discountAmount").value;
 
-        EDITING_ORDER_ID = order.id;
-        EDITING_RECEIPT_NUM = order.receipt_number;
+        EDITING_ORDER_ID = order.id; EDITING_RECEIPT_NUM = order.receipt_number;
 
-        const checkoutBtn = document.getElementById('checkoutBtn');
-        checkoutBtn.innerHTML = "حفظ التعديل وطباعة 🖨️";
-        checkoutBtn.className = "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-indigo-600 hover:bg-indigo-700";
+        const checkoutBtn = document.getElementById('checkoutBtn'); checkoutBtn.innerHTML = "حفظ التعديل وطباعة 🖨️"; checkoutBtn.className = "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-indigo-600 hover:bg-indigo-700";
 
-        updateCart();
-        closeEditOrderModal();
-        alert("تم استرجاع الفاتورة للسلة.. تقدر تعدل براحتك وتدوس حفظ.");
-
-    } catch (err) {
-        alert(err.message || "حدث خطأ أثناء البحث");
-    } finally {
-        btn.disabled = false; btn.textContent = "بحث واسترجاع للسلة";
-    }
+        updateCart(); closeEditOrderModal(); alert("تم استرجاع الفاتورة للسلة.. تقدر تعدل براحتك وتدوس حفظ.");
+    } catch (err) { alert(err.message || "حدث خطأ أثناء البحث"); } 
+    finally { btn.disabled = false; btn.textContent = "بحث واسترجاع للسلة"; }
 }
 
-document.getElementById("endShiftBtn").addEventListener("click", () => {
-  document.getElementById("endShiftModal").classList.add("open");
-});
+document.getElementById("endShiftBtn").addEventListener("click", () => { document.getElementById("endShiftModal").classList.add("open"); });
 
 document.getElementById("confirmEndShiftBtn").addEventListener("click", async () => {
   const actualCash = document.getElementById("actualCashInput").value;
   if(!actualCash) return alert("أدخل النقدية الفعلية!");
-
-  const btn = document.getElementById("confirmEndShiftBtn");
-  btn.disabled = true;
-  btn.textContent = "جاري الإغلاق...";
+  const btn = document.getElementById("confirmEndShiftBtn"); btn.disabled = true; btn.textContent = "جاري الإغلاق...";
 
   const { data: orders } = await supabaseClient.from("orders").select("total_amount").eq("cashier_id", CURRENT_USER.id).gte("created_at", CURRENT_SHIFT.opened_at);
   const shiftTotal = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
 
   await supabaseClient.from("cashier_shifts").update({
-    status: "closed", closed_at: new Date().toISOString(),
-    actual_cash: actualCash, expected_cash: shiftTotal + Number(CURRENT_SHIFT.opening_cash), total_sales: shiftTotal
+    status: "closed", closed_at: new Date().toISOString(), actual_cash: actualCash, expected_cash: shiftTotal + Number(CURRENT_SHIFT.opening_cash), total_sales: shiftTotal
   }).eq("id", CURRENT_SHIFT.id);
 
   printZReport(shiftTotal, actualCash, CURRENT_SHIFT.opening_cash);
 
-  setTimeout(async () => {
-    // تسجيل الخروج ومحاولة الإغلاق الكامل
-    await supabaseClient.auth.signOut();
-    window.open('', '_self', ''); 
-    window.close();
-    setTimeout(() => { window.location.href = "index.html"; }, 500);
-  }, 2000);
+  setTimeout(async () => { await supabaseClient.auth.signOut(); window.open('', '_self', ''); window.close(); setTimeout(() => { window.location.href = "index.html"; }, 500); }, 2000);
 });
 
 function printReceipt(num, items, cust, note, disc) {
@@ -927,39 +818,23 @@ function printReceipt(num, items, cust, note, disc) {
   const welcomeMsg = escapeHtml(branchSettings.welcome_message);
 
   let html = ``;
-  if (logoUrl) {
-      html += `<img src="${logoUrl}" id="receiptLogo" class="r-logo">`;
-  }
-  
-  html += `<div class="r-title">${nameEn}</div><div class="r-divider"></div>
-  <div class="r-row"><span>رقم:</span><span>${escapeHtml(num)}</span></div>`;
+  if (logoUrl) html += `<img src="${logoUrl}" id="receiptLogo" class="r-logo">`;
+  html += `<div class="r-title">${nameEn}</div><div class="r-divider"></div><div class="r-row"><span>رقم:</span><span>${escapeHtml(num)}</span></div>`;
   if(cust) html += `<div class="r-row"><span>العميل:</span><span>${escapeHtml(cust)}</span></div>`;
   html += `<div class="r-divider"></div><table><tr><th>الصنف</th><th>سعر</th><th>ك</th><th>ج</th></tr>`;
-  
   items.forEach(i => html += `<tr><td>${escapeHtml(i.name)}</td><td>${Number(i.base_price).toFixed(2)}</td><td>${i.qty}</td><td>${(i.base_price*i.qty).toFixed(2)}</td></tr>`);  
-  
-  html += `</table><div class="r-divider"></div>
-  <div class="r-row"><span>الإجمالي الفرعي:</span><span>${subtotal.toFixed(2)}</span></div>`;
+  html += `</table><div class="r-divider"></div><div class="r-row"><span>الإجمالي الفرعي:</span><span>${subtotal.toFixed(2)}</span></div>`;
   if(disc > 0) html += `<div class="r-row"><span>الخصم:</span><span>-${disc.toFixed(2)}</span></div>`;
   html += `<div class="r-row font-bold"><span>المطلوب:</span><span>${total.toFixed(2)}</span></div>`;
   if(note) html += `<div class="r-divider"></div><div class="text-center text-xs">ملاحظة: ${escapeHtml(note)}</div>`;
-  
   html += `<div class="r-divider"></div><div class="text-center font-bold" style="margin-top:5px;">${welcomeMsg}</div>`;
   
   document.getElementById("printArea").innerHTML = html;
-
-  if (logoUrl) {
-      let imgElement = document.getElementById("receiptLogo");
-      imgElement.onload = function() { window.print(); };
-      imgElement.onerror = function() { window.print(); }; 
-  } else {
-      window.print();
-  }
+  if (logoUrl) { let imgElement = document.getElementById("receiptLogo"); imgElement.onload = function() { window.print(); }; imgElement.onerror = function() { window.print(); }; } else { window.print(); }
 }
 
 function printZReport(sales, actual, opening) {
-  const html = `<div class="r-title">تقرير إغلاق الوردية (Z-Report)</div>
-  <div class="r-divider"></div>
+  const html = `<div class="r-title">تقرير إغلاق الوردية (Z-Report)</div><div class="r-divider"></div>
   <div class="r-row"><span>وقت الفتح:</span><span dir="ltr">${new Date(CURRENT_SHIFT.opened_at).toLocaleString('ar-EG')}</span></div>
   <div class="r-row"><span>وقت الإغلاق:</span><span dir="ltr">${new Date().toLocaleString('ar-EG')}</span></div>
   <div class="r-divider"></div>
@@ -970,9 +845,7 @@ function printZReport(sales, actual, opening) {
   <div class="r-row font-bold"><span>الفعلي (الجرد):</span><span>${Number(actual).toFixed(2)}</span></div>
   <div class="r-row font-bold"><span>العجز/الزيادة:</span><span>${(Number(actual) - (Number(sales) + Number(opening))).toFixed(2)}</span></div>
   <div class="r-divider"></div><div class="text-center">تم إغلاق الوردية بنجاح</div>`;
-  
-  document.getElementById("printArea").innerHTML = html;
-  window.print();
+  document.getElementById("printArea").innerHTML = html; window.print();
 }
 
 init();
