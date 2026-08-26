@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة الإدارة | مخبز العائلة</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -26,7 +26,6 @@
   .form-input, .form-select { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; color: var(--ink); }
   .form-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; display: block; }
 
-  /* Print Styles for Reprinting */
   #printArea { display: none; }
   @media print {
     @page { margin: 0; size: 80mm auto; }
@@ -42,7 +41,6 @@
     .r-title { font-size: 16px; font-weight: bold; text-align: center; }
     .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
     .r-row { display: flex; justify-content: space-between; }
-    /* مسافات البون المظبوطة */
     table { width: 100%; text-align: right; border-collapse: collapse; margin: 8px 0; }
     th { border-bottom: 1px dashed #000; padding-bottom: 5px; font-size: 11px; }
     td { padding-top: 5px; padding-bottom: 5px; font-size: 12px; font-weight: bold; }
@@ -67,6 +65,8 @@
       <div class="nav-item active" data-tab="overview"><span>📊</span><span>نظرة عامة</span></div>
       <div class="nav-item" data-tab="inventory"><span>📦</span><span>المخزن والإنتاج</span></div>
       <div class="nav-item" data-tab="products"><span>🥐</span><span>المنتجات والخامات</span></div>
+      <!-- التبويبة الجديدة -->
+      <div class="nav-item" data-tab="clients"><span>🤝</span><span>عملاء الشركات (B2B)</span></div>
       <div class="nav-item" data-tab="shifts"><span>👥</span><span>الورديات والمبيعات</span></div>
       <div class="nav-item" data-tab="hr"><span>🏢</span><span>الموارد البشرية والإعدادات</span></div>
     </nav>
@@ -110,7 +110,7 @@
             <thead>
               <tr class="bg-gray-100">
                 <th class="p-3">اسم المنتج</th>
-                <th class="p-3">السعر</th>
+                <th class="p-3">السعر الأساسي</th>
                 <th class="p-3">إجراءات</th>
               </tr>
             </thead>
@@ -136,14 +136,31 @@
         </div>
       </section>
 
+      <!-- القسم الجديد للشركات -->
+      <section id="tab-clients" class="content-section">
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="font-display font-extrabold text-2xl">🤝 عملاء الجملة والشركات</h2>
+          <button onclick="openAddClientModal()" class="px-5 py-3 rounded-xl bg-yellow-600 font-bold text-sm">➕ تسجيل شركة جديدة</button>
+        </div>
+        <div class="stat-card mb-8">
+          <table class="w-full text-sm text-right">
+            <thead>
+              <tr class="bg-gray-100">
+                <th class="p-4">اسم الشركة</th>
+                <th class="p-4">إعدادات أسعار الشركة</th>
+              </tr>
+            </thead>
+            <tbody id="clientsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section id="tab-shifts" class="content-section">
         <h2 class="font-display font-extrabold text-2xl mb-6">👥 الورديات والمبيعات</h2>
-        
         <div class="stat-card mb-8">
           <h3 class="p-4 font-bold border-b bg-gray-50 rounded-t-18">سجل الورديات</h3>
           <table class="w-full text-sm text-right"><thead><tr class="bg-gray-100 border-b"><th class="p-3">الكاشير</th><th class="p-3">الفتح</th><th class="p-3">الإغلاق</th><th class="p-3">المتوقع</th><th class="p-3">الفعلي</th></tr></thead><tbody id="shiftsTableBody"></tbody></table>
         </div>
-
         <div class="stat-card">
           <h3 class="p-4 font-bold border-b bg-gray-50 rounded-t-18 flex justify-between items-center">
             <span>سجل الفواتير (لإعادة الطباعة)</span>
@@ -151,7 +168,7 @@
           </h3>
           <div class="overflow-x-auto max-h-96">
             <table class="w-full text-sm text-right">
-              <thead><tr class="bg-gray-100 border-b"><th class="p-3">رقم الفاتورة</th><th class="p-3">التاريخ والوقت</th><th class="p-3">اسم العميل</th><th class="p-3">الإجمالي</th><th class="p-3">إجراءات</th></tr></thead>
+              <thead><tr class="bg-gray-100 border-b"><th class="p-3">رقم الفاتورة</th><th class="p-3">التاريخ والوقت</th><th class="p-3">العميل / الشركة</th><th class="p-3">الإجمالي</th><th class="p-3">إجراءات</th></tr></thead>
               <tbody id="ordersTableBody">
                   <tr><td colspan="5" class="text-center p-4">جاري تحميل البيانات...</td></tr>
               </tbody>
@@ -163,7 +180,6 @@
       <section id="tab-hr" class="content-section">
         <div class="mb-6 flex justify-between items-center">
           <h2 class="font-display font-extrabold text-2xl">🏢 الموارد البشرية والإعدادات</h2>
-          <!-- الزرار الجديد لفتح إعدادات الفاتورة من الإدارة -->
           <button onclick="openReceiptSettings()" class="bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold text-sm hover:bg-yellow-600 transition">⚙️ إعدادات الفاتورة</button>
         </div>
         <div class="stat-card overflow-hidden">
@@ -185,7 +201,37 @@
   </main>
 </div>
 
-<!-- Modal إعدادات الفاتورة -->
+<!-- ================= Modals ================= -->
+
+<!-- مودال إضافة شركة -->
+<div id="addClientModal" class="modal-overlay">
+  <div class="app-modal p-6 rounded-xl w-[400px]">
+    <h3 class="font-bold text-xl mb-4">➕ إضافة شركة جديدة</h3>
+    <input type="text" id="newClientName" placeholder="اسم الشركة (مثال: مستشفى الصفوة)" class="form-input mb-4">
+    <div class="flex gap-2">
+        <button onclick="saveNewClient()" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-bold">حفظ الشركة</button>
+        <button onclick="document.getElementById('addClientModal').classList.remove('open')" class="flex-1 bg-gray-500 text-white py-3 rounded-lg font-bold">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- مودال تسعير خاص للشركة -->
+<div id="clientPricesModal" class="modal-overlay">
+  <div class="app-modal p-6 rounded-xl w-[500px]">
+    <h3 class="font-bold text-xl mb-2" id="clientPricesTitle">قائمة الأسعار المخصصة</h3>
+    <p class="text-xs text-gray-500 mb-4 border-b pb-2">أي منتج هتسيب خانته فاضية، السيستم هيبيعه للشركة دي بالسعر الأساسي.</p>
+    
+    <div class="max-h-80 overflow-y-auto pr-2 mb-4" id="clientPricesList">
+        <!-- هتتملي بالجافاسكريبت بالمنتجات -->
+    </div>
+    
+    <div class="flex gap-2">
+        <button onclick="saveClientPrices()" id="saveClientPricesBtn" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold">حفظ الأسعار</button>
+        <button onclick="document.getElementById('clientPricesModal').classList.remove('open')" class="flex-1 bg-gray-500 text-white py-3 rounded-lg font-bold">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <div id="receiptSettingsModal" class="modal-overlay">
   <div class="app-modal p-6 rounded-xl w-[400px]">
     <h3 class="font-bold text-xl mb-4 text-center">⚙️ إعدادات الفاتورة والفرع</h3>
@@ -246,11 +292,13 @@
 </div>
 
 <div id="productModalOverlay" class="modal-overlay">
-  <div class="app-modal p-6 rounded-xl w-[400px]">
+  <div class="app-modal p-6 rounded-xl w-[500px]">
     <h3 id="productModalTitle" class="font-bold mb-4">إضافة منتج جديد وتحديد وصفته</h3>
     <input id="newProdName" type="text" class="form-input mb-2" placeholder="اسم المنتج">
-    <input id="newProdBarcode" type="text" class="form-input mb-2" placeholder="الباركود (اختياري)">
-    <input id="newProdPrice" type="number" class="form-input mb-2" placeholder="السعر">
+    <div class="flex gap-2 mb-2">
+        <input id="newProdBarcode" type="text" class="form-input flex-1" placeholder="الباركود (اختياري)">
+        <input id="newProdPrice" type="number" class="form-input w-28" placeholder="السعر">
+    </div>
     <select id="newProdCategory" class="form-select mb-4">
       <option value="bakery">مخبوزات</option>
       <option value="sweets">حلويات</option>
@@ -262,7 +310,7 @@
           <input id="recipeQtyInput" type="number" class="form-input w-24 text-xs" placeholder="الكمية">
           <button id="addRecipeIngredientBtn" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold">أضف</button>
       </div>
-      <ul id="recipeList" class="text-xs text-gray-700 max-h-24 overflow-y-auto bg-white rounded border border-gray-200 p-1">
+      <ul id="recipeList" class="text-xs text-gray-700 max-h-32 overflow-y-auto bg-white rounded border border-gray-200 p-1">
           <li class="p-1 text-center text-gray-400">لم يتم إضافة خامات للوصفة بعد</li>
       </ul>
     </div>
@@ -285,6 +333,10 @@ let CURRENT_BRANCH_ID = null;
 let pendingRecipeIngredients = [];
 let EDITING_PRODUCT_ID = null;
 
+// متغيرات العملاء B2B
+let GLOBAL_PRODUCTS = []; // عشان نحتفظ بالمنتجات عشان المودال بتاع الأسعار المخصصة
+let EDITING_CLIENT_ID = null;
+
 function escapeHtml(str) {
   if (!str) return '';
   const div = document.createElement('div');
@@ -302,8 +354,117 @@ async function initApp() {
   document.getElementById("adminNameDisplay").textContent = escapeHtml(data.full_name);
   
   loadIngredientsCatalog(); loadIngredientStock(); loadProductStock(); loadProductsTable(); loadShifts(); loadPayrollSummary();
-  loadOrders();
+  loadOrders(); loadClientsList();
 }
+
+// ================= نظام الشركات B2B =================
+
+async function loadClientsList() {
+    const { data } = await supabaseClient.from("clients").select("*").eq("branch_id", CURRENT_BRANCH_ID).order('created_at');
+    const tbody = document.getElementById("clientsTableBody");
+    if(!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="2" class="p-4 text-center text-gray-500">لا يوجد شركات مسجلة</td></tr>`;
+        return;
+    }
+    
+    tbody.innerHTML = data.map(c => `
+        <tr class="border-b hover:bg-gray-50">
+            <td class="p-4 font-bold text-lg">${escapeHtml(c.name)}</td>
+            <td class="p-4">
+                <button onclick="openManagePricesModal('${c.id}', '${escapeHtml(c.name)}')" class="bg-blue-100 text-blue-800 hover:bg-blue-200 px-4 py-2 rounded-lg font-bold text-xs transition">
+                    تحديد أسعار الشركة 🏷️
+                </button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+function openAddClientModal() {
+    document.getElementById("newClientName").value = "";
+    document.getElementById("addClientModal").classList.add("open");
+}
+
+async function saveNewClient() {
+    const name = document.getElementById("newClientName").value;
+    if(!name) return alert("اكتب اسم الشركة!");
+    
+    const { error } = await supabaseClient.from("clients").insert({ branch_id: CURRENT_BRANCH_ID, name: name });
+    if(error) {
+        alert("حدث خطأ: " + error.message);
+    } else {
+        alert("تم حفظ الشركة بنجاح!");
+        document.getElementById("addClientModal").classList.remove("open");
+        loadClientsList();
+    }
+}
+
+async function openManagePricesModal(clientId, clientName) {
+    EDITING_CLIENT_ID = clientId;
+    document.getElementById("clientPricesTitle").textContent = `أسعار مخصصة لـ (${clientName})`;
+    
+    // هنجيب الأسعار الحالية لو متسجلة
+    const { data: currentPrices } = await supabaseClient.from("client_prices").select("product_id, custom_price").eq("client_id", clientId);
+    const priceMap = {};
+    if (currentPrices) {
+        currentPrices.forEach(p => priceMap[p.product_id] = p.custom_price);
+    }
+
+    const listDiv = document.getElementById("clientPricesList");
+    
+    // بناء القائمة بناء على الـ GLOBAL_PRODUCTS اللي اتسحبت في loadProductsTable
+    let html = '';
+    GLOBAL_PRODUCTS.forEach(prod => {
+        let savedPrice = priceMap[prod.id] !== undefined ? priceMap[prod.id] : "";
+        html += `
+            <div class="flex justify-between items-center mb-2 bg-gray-50 p-2 rounded border">
+                <div class="flex-1 font-bold text-sm text-gray-800">${escapeHtml(prod.name)} <span class="text-xs text-gray-400 font-normal ml-2">(${prod.base_price}ج أساسي)</span></div>
+                <input type="number" class="form-input w-24 text-center client-price-input" data-product-id="${prod.id}" value="${savedPrice}" placeholder="أساسي">
+            </div>
+        `;
+    });
+    
+    listDiv.innerHTML = html;
+    document.getElementById("clientPricesModal").classList.add("open");
+}
+
+async function saveClientPrices() {
+    if(!EDITING_CLIENT_ID) return;
+    const btn = document.getElementById("saveClientPricesBtn");
+    btn.textContent = "جاري الحفظ..."; btn.disabled = true;
+
+    const inputs = document.querySelectorAll(".client-price-input");
+    let newPricesToInsert = [];
+
+    inputs.forEach(input => {
+        const val = input.value;
+        if(val && Number(val) >= 0) {
+            newPricesToInsert.push({
+                client_id: EDITING_CLIENT_ID,
+                product_id: input.dataset.productId,
+                custom_price: Number(val)
+            });
+        }
+    });
+
+    try {
+        // نمسح أسعار الشركة دي القديمة بالكامل، ونرمي الجديدة النضيفة بدالها
+        await supabaseClient.from("client_prices").delete().eq("client_id", EDITING_CLIENT_ID);
+        
+        if (newPricesToInsert.length > 0) {
+            const { error } = await supabaseClient.from("client_prices").insert(newPricesToInsert);
+            if(error) throw error;
+        }
+
+        alert("تم حفظ الأسعار للشركة بنجاح! هتبان فوراً عند الكاشير.");
+        document.getElementById("clientPricesModal").classList.remove("open");
+    } catch (err) {
+        alert("حدث خطأ أثناء الحفظ: " + err.message);
+    } finally {
+        btn.textContent = "حفظ الأسعار"; btn.disabled = false;
+    }
+}
+
+// ===================================================
 
 document.getElementById("saveNewStaffBtn").addEventListener("click", async () => {
   const name = document.getElementById("staffName").value;
@@ -393,7 +554,6 @@ document.getElementById("receiptConfirmBtn").addEventListener("click", async () 
   }
 });
 
-
 // ====== سحب الخامات أوتوماتيك وقت الإنتاج ======
 document.getElementById("prodConfirmBtn").addEventListener("click", async () => {
   const prodId = document.getElementById("prodProductSelect").value;
@@ -406,19 +566,17 @@ document.getElementById("prodConfirmBtn").addEventListener("click", async () => 
   btn.textContent = "جاري الإنشاء والخصم..."; btn.disabled = true;
 
   try {
-    // 1. تسجيل الإنتاج
     await supabaseClient.from("production_batches").insert({ 
       product_id: prodId, quantity_produced: qty, branch_id: CURRENT_BRANCH_ID, staff_id: CURRENT_USER.id 
     });
 
-    // 2. تزويد رصيد المنتج الجاهز
     await supabaseClient.rpc('add_to_product_stock', {
       p_branch_id: CURRENT_BRANCH_ID,
       p_product_id: prodId,
       p_qty: qty
     });
 
-    // 3. قراءة الوصفة وخصم الخامات من المخزن
+    // قراءة الوصفة وخصم الخامات من المخزن
     const { data: recipe } = await supabaseClient
         .from("product_ingredients")
         .select("ingredient_id, quantity_grams")
@@ -427,7 +585,6 @@ document.getElementById("prodConfirmBtn").addEventListener("click", async () => 
     if (recipe && recipe.length > 0) {
         for (let item of recipe) {
             const totalGramsNeeded = item.quantity_grams * qty;
-            // بنبعت الكمية المطلوبة بالسالب عشان الداتابيز تخصمها من المخزن
             await supabaseClient.rpc('add_to_ingredient_stock', {
                 p_branch_id: CURRENT_BRANCH_ID,
                 p_ingredient_id: item.ingredient_id,
@@ -440,7 +597,7 @@ document.getElementById("prodConfirmBtn").addEventListener("click", async () => 
     document.getElementById("modalOverlayBase").classList.remove("open");
     document.getElementById("prodQtyInput").value = "";
     loadProductStock();
-    loadIngredientStock(); // نعمل ريفريش لجدول الخامات عشان نشوف الخصم
+    loadIngredientStock(); 
   } catch (error) {
     alert("حدث خطأ أثناء الإنتاج: " + error.message);
   } finally {
@@ -675,13 +832,14 @@ async function loadProductStock() {
 
 async function loadProductsTable() { 
   const { data } = await supabaseClient.from("products").select("*").order('is_active', { ascending: false }); 
+  GLOBAL_PRODUCTS = data || []; // حفظ المنتجات عشان مودال الشركات
   
   document.getElementById("productsTableBody").innerHTML = data.map(p => `
     <tr class="border-b transition ${p.is_active ? 'hover:bg-gray-50' : 'opacity-50 bg-gray-100'}">
       <td class="p-3">${escapeHtml(p.name)}</td>
       <td class="p-3 font-bold">${p.base_price} ج</td>
       <td class="p-3">
-        <div class="flex gap-2">
+        <div class="flex gap-2 justify-end">
           <button class="edit-prod-btn bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-xs font-bold transition" data-id="${p.id}">
             تعديل ✏️
           </button>
@@ -745,7 +903,7 @@ async function loadPayrollSummary() {
 }
 
 async function loadOrders() {
-    const { data: orders, error } = await supabaseClient.from('orders').select('*').order('created_at', { ascending: false }).limit(50);
+    const { data: orders, error } = await supabaseClient.from('orders').select('*, clients(name)').order('created_at', { ascending: false }).limit(50);
     const tbody = document.getElementById("ordersTableBody");
     if(error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500">حدث خطأ في التحميل</td></tr>`; return; }
     if(orders.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4">لا توجد فواتير مسجلة حتى الآن</td></tr>`; return; }
@@ -754,11 +912,11 @@ async function loadOrders() {
         <tr class="border-b hover:bg-gray-50 transition">
             <td class="p-3 font-bold">${escapeHtml(order.receipt_number)}</td>
             <td class="p-3 text-sm text-gray-600" dir="ltr">${new Date(order.created_at).toLocaleString('ar-EG')}</td>
-            <td class="p-3"><span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-sm font-bold">${escapeHtml(order.customer_name || 'عميل نقدي')}</span></td>
+            <td class="p-3"><span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-sm font-bold">${order.clients ? escapeHtml(order.clients.name) + ' 🏢' : escapeHtml(order.customer_name || 'عميل نقدي')}</span></td>
             <td class="p-3 font-bold text-green-600">${Number(order.total_amount).toFixed(2)} ج</td>
             <td class="p-3">
                 <button class="reprint-btn bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition text-xs font-bold" 
-                    data-id="${escapeHtml(order.id)}" data-receipt="${escapeHtml(order.receipt_number)}" data-customer="${escapeHtml(order.customer_name || 'عميل نقدي')}" data-total="${order.total_amount}">
+                    data-id="${escapeHtml(order.id)}" data-receipt="${escapeHtml(order.receipt_number)}" data-customer="${order.clients ? escapeHtml(order.clients.name) : escapeHtml(order.customer_name || 'عميل نقدي')}" data-total="${order.total_amount}">
                     طباعة 🖨️
                 </button>
             </td>
@@ -844,7 +1002,6 @@ document.querySelectorAll(".nav-item").forEach(item => {
 
 function openReceiptModal() { document.getElementById("receiptModalOverlay").classList.add("open"); }
 
-// ====== دالة الخروج للديسكتوب ======
 document.getElementById("logoutBtn").addEventListener("click", async () => { 
   await supabaseClient.auth.signOut(); 
   window.open('', '_self', ''); 
