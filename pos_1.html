@@ -97,7 +97,7 @@
     <div class="relative mb-4 flex gap-2">
         <div class="relative flex-1">
             <input type="text" id="productSearch" placeholder="🔍 ابحث عن منتج أو باركود..." class="form-input p-4 text-xl w-full pr-10" autocomplete="off">
-            <button onclick="clearSearchField()" type="button" id="clearSearchBtn" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-red-500 hover:text-red-700 bg-red-100 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg hidden">✕</button>
+            <button onclick="clearSearchField()" type="button" id="clearSearchBtn" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-red-500 hover:text-red-700 bg-red-100 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg hidden shadow-sm">✕</button>
         </div>
     </div>
 
@@ -347,7 +347,7 @@ document.getElementById("actualCashInput").addEventListener("input", (e) => {
     numericBuffers.actualCashInput = e.target.value;
 });
 
-// === إعدادات الكيبورد الذكي ===
+// === إعدادات الكيبورد الذكي القوية ===
 let keyboard;
 let selectedInputName = "productSearch"; 
 
@@ -407,7 +407,7 @@ function closeKeyboard() {
     document.querySelectorAll('.modal-overlay').forEach(m => {
         m.style.alignItems = 'center'; m.style.paddingTop = '0px';
     });
-    // مسح الـ Focus عشان لما يدوس تاني يفتح الكيبورد عادي
+    // مسح الـ Focus عشان لما تضغط تاني يشتغل
     if (document.activeElement && document.activeElement.classList.contains('form-input')) {
         document.activeElement.blur();
     }
@@ -441,11 +441,11 @@ managerBox.addEventListener("keydown", (e) => {
     }
 });
 
-// === ربط جميع החقول بالكيبورد الذكي ===
+// === فصل الكيبورد التاتش عن اللاب توب عشان نمنع القفلة ===
 document.querySelectorAll('.form-input').forEach(input => {
   if (input.id === 'managerCodeBox') return; 
   
-  // حطينا click و focus عشان نضمن إن الكيبورد هيظهر 100% في كل الحالات
+  // ظهور الكيبورد مع أي ضغطة
   input.addEventListener("click", (e) => {
     selectedInputName = e.target.id;
     if(!keyboard) initKeyboard();
@@ -471,26 +471,37 @@ document.querySelectorAll('.form-input').forEach(input => {
     showKeyboardWithScroll(e.target);
   });
 
-  // مزامنة حقيقية عشان نمنع حرف "و" واللخبطة بين كيبورد اللاب والتاتش
-  let typingTimer;
+  // مزامنة آمنة للبحث تمنع ظهور حرف الواو
   input.addEventListener("input", (e) => {
-      if (keyboard && selectedInputName === e.target.id && !numericFieldIds.includes(e.target.id)) {
-          clearTimeout(typingTimer);
-          typingTimer = setTimeout(() => {
-              keyboard.setInput(e.target.value);
-          }, 50);
+      if (selectedInputName === e.target.id) {
+          if (numericFieldIds.includes(e.target.id)) {
+              numericBuffers[e.target.id] = e.target.value;
+          } else {
+              if (keyboard && keyboard.getInput() !== e.target.value) {
+                  keyboard.setInput(e.target.value || "");
+              }
+          }
+          
+          if (e.target.id === 'productSearch') {
+              renderProducts();
+          }
       }
   });
 });
 
+// دي بتشتغل بس من الكيبورد التاتش
 function onChange(input) {
   if (selectedInputName === 'managerCodeBox') return; 
   if (numericFieldIds.includes(selectedInputName)) return; 
   
   const el = document.getElementById(selectedInputName);
-  if(el) {
+  if (el && el.value !== input) {
       el.value = input;
-      el.dispatchEvent(new Event('input', { bubbles: true })); 
+      if (selectedInputName === 'productSearch') {
+          renderProducts();
+      } else {
+          el.dispatchEvent(new Event('input', { bubbles: true })); 
+      }
   }
 }
 
@@ -521,11 +532,10 @@ function onKeyPress(button) {
       return;
   }
 
-  // === البحث الذكي وزرار التأكيد ===
+  // معالجة زرار التأكيد في البحث
   if (button === "{enter}") {
       const el = document.getElementById(selectedInputName);
       if(el && selectedInputName === "productSearch") {
-          // هنخلي السيستم يشتغل كأننا دوسنا إنتر من اللاب توب بالظبط
           el.dispatchEvent(new KeyboardEvent('keypress', {key: 'Enter'})); 
       } else {
           closeKeyboard();
@@ -533,7 +543,7 @@ function onKeyPress(button) {
   }
 }
 
-// === مسح حقل البحث في ثانية ===
+// مسح شريط البحث عن طريق زرار الـ ✕ عشان مش كل حاجة تتمسح
 function clearSearchField() {
     const searchInput = document.getElementById("productSearch");
     searchInput.value = "";
@@ -541,7 +551,7 @@ function clearSearchField() {
         keyboard.setInput("");
     }
     renderProducts();
-    searchInput.focus(); // هنقف جواه تاني عشان لو حابب تبحث عن حاجة تانية
+    searchInput.focus(); 
 }
 
 function openShiftSalesModal() {
@@ -575,7 +585,7 @@ async function executeShiftSales() {
 }
 
 async function quickLogout() {
-    if(confirm("هل أنت متأكد أنك تريد الخروج السريع (لن يتم إغلاق الوردية وسيتم حفظ المبيعات)؟")) {
+    if(confirm("هل أنت متأكد أن الخروج السريع لن يغلق الوردية وسيتم حفظ المبيعات؟")) {
         await supabaseClient.auth.signOut();
         window.open('', '_self', ''); window.close();
         setTimeout(() => { window.location.href = "index.html"; }, 500);
@@ -678,11 +688,11 @@ async function loadProducts() {
   renderProducts();
 }
 
+// === دالة رسم المنتجات الآمنة من الأخطاء ===
 function renderProducts() {
   const searchInput = document.getElementById("productSearch");
-  const search = searchInput.value.toLowerCase();
+  const search = searchInput.value.toLowerCase().trim();
   
-  // إظهار وإخفاء زرار الإكس (المسح)
   const clearBtn = document.getElementById("clearSearchBtn");
   if (clearBtn) {
       if (search.length > 0) clearBtn.classList.remove("hidden");
@@ -690,7 +700,14 @@ function renderProducts() {
   }
 
   const grid = document.getElementById("productGrid");
-  const filtered = products.filter(p => p.name.toLowerCase().includes(search) || (p.barcode && p.barcode.includes(search)));
+  
+  // فلترة ذكية مبتضربش إيرور لو اسم المنتج مش موجود
+  const filtered = products.filter(p => {
+      if (!search) return true;
+      const nameMatch = p.name && p.name.toLowerCase().includes(search);
+      const barcodeMatch = p.barcode && p.barcode.includes(search);
+      return nameMatch || barcodeMatch;
+  });
   
   const cardColors = ['bg-blue-100 border-blue-400', 'bg-green-100 border-green-400', 'bg-yellow-100 border-yellow-400', 'bg-pink-100 border-pink-400', 'bg-purple-100 border-purple-400', 'bg-orange-100 border-orange-400'];
 
@@ -704,7 +721,6 @@ function renderProducts() {
         ? `<span class="line-through text-red-500 text-xs ml-1">${Number(p.base_price).toFixed(2)}</span> <span class="text-green-700">${Number(displayPrice).toFixed(2)} ج</span>`
         : `${Number(displayPrice).toFixed(2)} ج`;
 
-    // تنسيق الخط ليكون مقري جداً مع المحافظة على منع خروج النص برا المربع
     return `
     <div onclick="addToCart('${p.id}')" class="product-card ${colorScheme} border-2 p-2 rounded-xl text-center flex flex-col justify-between items-center shadow-md h-28 relative overflow-hidden">
       ${isDiscounted ? '<span class="absolute top-0 right-0 text-[10px] bg-red-500 text-white px-1 rounded-bl">سعر شركة</span>' : ''}
@@ -714,16 +730,13 @@ function renderProducts() {
   `}).join("");
 }
 
-document.getElementById("productSearch").addEventListener("input", renderProducts);
-
-// === معالجة البحث بأرقام (الباركود) أو الحروف (الاسم) ===
+// === البحث الذكي والباركود ===
 document.getElementById("productSearch").addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
     e.preventDefault(); 
     const scanVal = e.target.value.trim();
     if (!scanVal) return;
 
-    // باركود الميزان (لحمة/مخبوزات بالوزن)
     if (scanVal.length === 13 && scanVal.startsWith("23")) {
       const itemCode = scanVal.substring(2, 7); 
       const weightInGrams = scanVal.substring(7, 12); 
@@ -735,36 +748,26 @@ document.getElementById("productSearch").addEventListener("keypress", (e) => {
         if(cart[p.id]) cart[p.id].qty += weightInKg; 
         else cart[p.id] = { ...p, qty: weightInKg, base_price: currentPrice };
         
-        updateCart(); 
-        clearSearchField(); 
-        clearMultiplier(); return;
+        updateCart(); clearSearchField(); clearMultiplier(); return;
       }
     }
 
-    // هنا بيقرر هو باركود ولا بحث بالاسم
     const isBarcode = /^[0-9]+$/.test(scanVal);
     
     if (isBarcode) {
-        // لو أرقام بس، يبقى ده سكان بالباركود
         const normalProduct = products.find(x => x.barcode === scanVal);
         if (normalProduct) { 
-            addToCart(normalProduct.id); 
-            clearSearchField(); 
+            addToCart(normalProduct.id); clearSearchField(); 
         } else { 
-            alert("الباركود ده مش متسجل في السيستم!"); 
-            clearSearchField(); 
+            alert("الباركود ده مش متسجل في السيستم!"); clearSearchField(); 
         }
     } else {
-        // لو في حروف، يبقى بحث بالاسم
-        const filtered = products.filter(p => p.name.toLowerCase().includes(scanVal.toLowerCase()));
+        const filtered = products.filter(p => p.name && p.name.toLowerCase().includes(scanVal.toLowerCase()));
         if (filtered.length === 1) {
-            // لو منتج واحد बस، ضيفه فوراً
-            addToCart(filtered[0].id); 
-            clearSearchField();
+            addToCart(filtered[0].id); clearSearchField();
         } else if (filtered.length === 0) {
             alert("مفيش منتج بالاسم ده!");
         } else {
-            // لو منتجات كتير، سيبه مفتوح واقفل الكيبورد عشان يشوف ويختار
             closeKeyboard();
         }
     }
