@@ -94,9 +94,11 @@
   
   <main class="flex-1 flex flex-col p-4 border-l border-gray-300 relative">
     
-    <div class="relative mb-4">
-        <input type="text" id="productSearch" placeholder="🔍 ابحث عن منتج أو باركود..." class="form-input p-4 text-xl w-full pr-10">
-        <button onclick="clearSearchField()" id="clearSearchBtn" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-red-500 hover:text-red-700 bg-red-100 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg hidden">✕</button>
+    <div class="relative mb-4 flex gap-2">
+        <div class="relative flex-1">
+            <input type="text" id="productSearch" placeholder="🔍 ابحث عن منتج أو باركود..." class="form-input p-4 text-xl w-full pr-10" autocomplete="off">
+            <button onclick="clearSearchField()" type="button" id="clearSearchBtn" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-red-500 hover:text-red-700 bg-red-100 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg hidden">✕</button>
+        </div>
     </div>
 
     <div id="categoryTabs" class="flex gap-2 overflow-x-auto mb-4 pb-2"></div>
@@ -105,7 +107,7 @@
     <div id="keyboardWrapper" class="hidden">
         <div class="flex justify-between mb-2">
             <span class="text-sm font-bold text-gray-700">لوحة المفاتيح</span>
-            <button onclick="closeKeyboard()" class="text-red-500 font-bold text-sm bg-white px-2 rounded hover:bg-red-100">إغلاق ✕</button>
+            <button onclick="closeKeyboard()" type="button" class="text-red-500 font-bold text-sm bg-white px-2 rounded hover:bg-red-100">إغلاق ✕</button>
         </div>
         <div class="simple-keyboard" dir="ltr"></div>
     </div>
@@ -234,7 +236,6 @@ let b2bClients = [];
 let activeClientPrices = {};
 let offlineOrders = JSON.parse(localStorage.getItem("offlineOrders") || "[]");
 
-// === تحديث حالة الاتصال ورفع الفواتير المحفوظة ===
 function updateConnectionStatus() {
     const statusBadge = document.getElementById("connectionStatus");
     if (navigator.onLine) {
@@ -406,6 +407,10 @@ function closeKeyboard() {
     document.querySelectorAll('.modal-overlay').forEach(m => {
         m.style.alignItems = 'center'; m.style.paddingTop = '0px';
     });
+    // مسح الـ Focus عشان لما يدوس تاني يفتح الكيبورد عادي
+    if (document.activeElement && document.activeElement.classList.contains('form-input')) {
+        document.activeElement.blur();
+    }
 }
 
 let managerPassString = "";
@@ -436,8 +441,24 @@ managerBox.addEventListener("keydown", (e) => {
     }
 });
 
+// === ربط جميع החقول بالكيبورد الذكي ===
 document.querySelectorAll('.form-input').forEach(input => {
   if (input.id === 'managerCodeBox') return; 
+  
+  // حطينا click و focus عشان نضمن إن الكيبورد هيظهر 100% في كل الحالات
+  input.addEventListener("click", (e) => {
+    selectedInputName = e.target.id;
+    if(!keyboard) initKeyboard();
+    setKeyboardLayout(selectedInputName);
+    
+    if (numericFieldIds.includes(selectedInputName)) {
+        numericBuffers[selectedInputName] = e.target.value || "";
+    } else {
+        keyboard.setInput(e.target.value || "");
+    }
+    showKeyboardWithScroll(e.target);
+  });
+
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
     if(!keyboard) initKeyboard();
@@ -445,26 +466,34 @@ document.querySelectorAll('.form-input').forEach(input => {
     if (numericFieldIds.includes(selectedInputName)) {
         numericBuffers[selectedInputName] = e.target.value || "";
     } else {
-        keyboard.setInput(e.target.value);
+        keyboard.setInput(e.target.value || "");
     }
     showKeyboardWithScroll(e.target);
+  });
+
+  // مزامنة حقيقية عشان نمنع حرف "و" واللخبطة بين كيبورد اللاب والتاتش
+  let typingTimer;
+  input.addEventListener("input", (e) => {
+      if (keyboard && selectedInputName === e.target.id && !numericFieldIds.includes(e.target.id)) {
+          clearTimeout(typingTimer);
+          typingTimer = setTimeout(() => {
+              keyboard.setInput(e.target.value);
+          }, 50);
+      }
   });
 });
 
 function onChange(input) {
   if (selectedInputName === 'managerCodeBox') return; 
   if (numericFieldIds.includes(selectedInputName)) return; 
+  
   const el = document.getElementById(selectedInputName);
   if(el) {
       el.value = input;
       el.dispatchEvent(new Event('input', { bubbles: true })); 
-      if (selectedInputName === 'productSearch') {
-          renderProducts();
-      }
   }
 }
 
-// تعديل زرار التأكيد في التاتش للبحث الذكي وتفادي مشكلة الباركود
 function onKeyPress(button) {
   if (selectedInputName === 'managerCodeBox') {
       if (button === '{bksp}') managerPassString = managerPassString.slice(0, -1);
@@ -492,10 +521,11 @@ function onKeyPress(button) {
       return;
   }
 
+  // === البحث الذكي وزرار التأكيد ===
   if (button === "{enter}") {
       const el = document.getElementById(selectedInputName);
       if(el && selectedInputName === "productSearch") {
-          // هنحاكي ضغطة إنتر بنفس الطريقة
+          // هنخلي السيستم يشتغل كأننا دوسنا إنتر من اللاب توب بالظبط
           el.dispatchEvent(new KeyboardEvent('keypress', {key: 'Enter'})); 
       } else {
           closeKeyboard();
@@ -503,12 +533,15 @@ function onKeyPress(button) {
   }
 }
 
+// === مسح حقل البحث في ثانية ===
 function clearSearchField() {
     const searchInput = document.getElementById("productSearch");
     searchInput.value = "";
-    if (keyboard) keyboard.setInput("");
+    if (keyboard && selectedInputName === "productSearch") {
+        keyboard.setInput("");
+    }
     renderProducts();
-    searchInput.focus();
+    searchInput.focus(); // هنقف جواه تاني عشان لو حابب تبحث عن حاجة تانية
 }
 
 function openShiftSalesModal() {
@@ -649,6 +682,7 @@ function renderProducts() {
   const searchInput = document.getElementById("productSearch");
   const search = searchInput.value.toLowerCase();
   
+  // إظهار وإخفاء زرار الإكس (المسح)
   const clearBtn = document.getElementById("clearSearchBtn");
   if (clearBtn) {
       if (search.length > 0) clearBtn.classList.remove("hidden");
@@ -660,7 +694,6 @@ function renderProducts() {
   
   const cardColors = ['bg-blue-100 border-blue-400', 'bg-green-100 border-green-400', 'bg-yellow-100 border-yellow-400', 'bg-pink-100 border-pink-400', 'bg-purple-100 border-purple-400', 'bg-orange-100 border-orange-400'];
 
-  // تعديل الخط هنا ليكون text-base للوضوح مع المحافظة على التنسيق عشان الكلام ميهربش
   grid.innerHTML = filtered.map((p, index) => {
     const colorScheme = cardColors[index % cardColors.length];
     
@@ -671,6 +704,7 @@ function renderProducts() {
         ? `<span class="line-through text-red-500 text-xs ml-1">${Number(p.base_price).toFixed(2)}</span> <span class="text-green-700">${Number(displayPrice).toFixed(2)} ج</span>`
         : `${Number(displayPrice).toFixed(2)} ج`;
 
+    // تنسيق الخط ليكون مقري جداً مع المحافظة على منع خروج النص برا المربع
     return `
     <div onclick="addToCart('${p.id}')" class="product-card ${colorScheme} border-2 p-2 rounded-xl text-center flex flex-col justify-between items-center shadow-md h-28 relative overflow-hidden">
       ${isDiscounted ? '<span class="absolute top-0 right-0 text-[10px] bg-red-500 text-white px-1 rounded-bl">سعر شركة</span>' : ''}
@@ -680,13 +714,16 @@ function renderProducts() {
   `}).join("");
 }
 
-// دالة البحث وحل مشكلة الباركود
 document.getElementById("productSearch").addEventListener("input", renderProducts);
+
+// === معالجة البحث بأرقام (الباركود) أو الحروف (الاسم) ===
 document.getElementById("productSearch").addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
+    e.preventDefault(); 
     const scanVal = e.target.value.trim();
     if (!scanVal) return;
 
+    // باركود الميزان (لحمة/مخبوزات بالوزن)
     if (scanVal.length === 13 && scanVal.startsWith("23")) {
       const itemCode = scanVal.substring(2, 7); 
       const weightInGrams = scanVal.substring(7, 12); 
@@ -704,11 +741,11 @@ document.getElementById("productSearch").addEventListener("keypress", (e) => {
       }
     }
 
-    // هنا السحر بتاع البحث:
-    // لو الإدخال كله أرقام (يعني أكيد باركود)، هيدور عليه كباركود
+    // هنا بيقرر هو باركود ولا بحث بالاسم
     const isBarcode = /^[0-9]+$/.test(scanVal);
     
     if (isBarcode) {
+        // لو أرقام بس، يبقى ده سكان بالباركود
         const normalProduct = products.find(x => x.barcode === scanVal);
         if (normalProduct) { 
             addToCart(normalProduct.id); 
@@ -718,16 +755,16 @@ document.getElementById("productSearch").addEventListener("keypress", (e) => {
             clearSearchField(); 
         }
     } else {
-        // لو اللي مكتوب ده (اسم)، يعني بحث عادي
+        // لو في حروف، يبقى بحث بالاسم
         const filtered = products.filter(p => p.name.toLowerCase().includes(scanVal.toLowerCase()));
         if (filtered.length === 1) {
-            // لو لقى منتج واحد بس بالاسم ده، يضيفه فوراً
+            // لو منتج واحد बस، ضيفه فوراً
             addToCart(filtered[0].id); 
             clearSearchField();
         } else if (filtered.length === 0) {
             alert("مفيش منتج بالاسم ده!");
         } else {
-            // لو لقى منتجات كتير، يقفل الكيبورد عشان إنت تختار بعينك
+            // لو منتجات كتير، سيبه مفتوح واقفل الكيبورد عشان يشوف ويختار
             closeKeyboard();
         }
     }
