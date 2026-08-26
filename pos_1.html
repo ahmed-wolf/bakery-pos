@@ -68,6 +68,8 @@
   <div class="flex items-center gap-2">
     <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg" style="background: var(--honey);">🥐</div>
     <h1 class="font-display font-bold text-lg hidden md:block">نقطة البيع</h1>
+    <!-- لمبة حالة الإنترنت -->
+    <span id="connectionStatus" class="text-xs px-2 py-1 rounded bg-green-800 text-green-100 font-bold ml-2 transition-colors">🟢 متصل</span>
   </div>
   <div class="flex gap-1 overflow-x-auto">
     <button onclick="openShiftSalesModal()" class="bg-teal-600 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-teal-700 transition">
@@ -129,7 +131,6 @@
     <div class="p-4 flex-1 overflow-y-auto min-h-[150px]" id="cartList"></div>
     
     <div id="bottomInputsWrapper" class="p-4 shrink-0 transition-all duration-300" style="background: rgba(255,255,255,0.05);">
-      <!-- القائمة الخاصة بعملاء الشركات والجملة -->
       <select id="b2bClientSelect" class="form-select mb-2 bg-transparent text-white border-gray-500 font-bold" onchange="handleClientChange()">
           <option value="" class="text-black">-- بيع عادي (بدون شركة) --</option>
       </select>
@@ -224,9 +225,52 @@ let EDITING_RECEIPT_NUM = null;
 
 let branchSettings = { bakery_name: "مخبز العائلة", logo_url: "", welcome_message: "شكراً لزيارتكم" };
 
-// متغيرات الـ B2B
+// === متغيرات الأوفلاين والـ B2B ===
 let b2bClients = [];
-let activeClientPrices = {}; // { product_id: custom_price }
+let activeClientPrices = {};
+let offlineOrders = JSON.parse(localStorage.getItem("offlineOrders") || "[]");
+
+// === تحديث حالة الاتصال ورفع الفواتير المحفوظة ===
+function updateConnectionStatus() {
+    const statusBadge = document.getElementById("connectionStatus");
+    if (navigator.onLine) {
+        statusBadge.innerHTML = "🟢 متصل";
+        statusBadge.className = "text-xs px-2 py-1 rounded bg-green-800 text-green-100 font-bold ml-2 transition-colors";
+        syncOfflineOrders();
+    } else {
+        statusBadge.innerHTML = "🔴 أوفلاين (يتم الحفظ)";
+        statusBadge.className = "text-xs px-2 py-1 rounded bg-red-800 text-red-100 font-bold ml-2 transition-colors";
+    }
+}
+window.addEventListener('online', updateConnectionStatus);
+window.addEventListener('offline', updateConnectionStatus);
+
+async function syncOfflineOrders() {
+    if (offlineOrders.length === 0) return;
+    
+    let remainingOrders = [];
+    for (let order of offlineOrders) {
+        try {
+            const { items, id, ...orderInfo } = order; // إزالة الآي دي الوهمي
+            
+            const { data: newOrder, error } = await supabaseClient.from("orders").insert(orderInfo).select().single();
+            if (error) throw error;
+            
+            const orderItems = items.map(e => ({
+                order_id: newOrder.id, product_id: e.product_id, quantity: e.quantity, unit_price: e.unit_price
+            }));
+            const { error: itemsError } = await supabaseClient.from("order_items").insert(orderItems);
+            if (itemsError) throw itemsError;
+            
+        } catch (err) {
+            console.error("Failed to sync order", order.receipt_number, err);
+            remainingOrders.push(order); // الاحتفاظ بالفاتورة لو فشل الرفع عشان منخسرهاش
+        }
+    }
+    
+    offlineOrders = remainingOrders;
+    localStorage.setItem("offlineOrders", JSON.stringify(offlineOrders));
+}
 
 let currentMultiplierStr = "";
 
@@ -449,6 +493,10 @@ function onKeyPress(button) {
 }
 
 function openShiftSalesModal() {
+    if (!navigator.onLine) {
+        alert("يجب أن تكون متصلاً بالإنترنت لعمل جرد للوردية!");
+        return;
+    }
     document.getElementById('adminPassModal').classList.add("open");
     managerPassString = ""; updateFakeDots("");
     selectedInputName = 'managerCodeBox';
@@ -492,6 +540,7 @@ function openDrawer() {
 }
 
 async function init() {
+  updateConnectionStatus(); // فحص النت من البداية
   const { data: { session } } = await supabaseClient.auth.getSession();
   if(!session) { window.location.href = "index.html"; return; }
   CURRENT_USER = session.user;
@@ -513,12 +562,13 @@ async function init() {
   
   CURRENT_SHIFT = shift;
   
-  // تحميل قائمة عملاء الشركات
   await loadB2BClients();
   await loadProducts();
 }
 
 document.getElementById("confirmStartShiftBtn").addEventListener("click", async () => {
+  if (!navigator.onLine) return alert("لا يمكنك فتح وردية جديدة بدون إنترنت!");
+
   const btn = document.getElementById("confirmStartShiftBtn");
   const openingCash = document.getElementById("startShiftCashInput").value;
   if(openingCash === "" || isNaN(openingCash) || Number(openingCash) < 0) return alert("برجاء إدخال العهدة الافتتاحية بشكل صحيح!"); 
@@ -548,10 +598,9 @@ async function loadB2BClients() {
 
 async function handleClientChange() {
     const clientId = document.getElementById("b2bClientSelect").value;
-    activeClientPrices = {}; // تصفير الأسعار الخاصة
+    activeClientPrices = {};
 
     if (clientId) {
-        // لو اختار شركة، نجيب أسعارها المخصصة
         const { data } = await supabaseClient.from("client_prices").select("product_id, custom_price").eq("client_id", clientId);
         if (data) {
             data.forEach(item => {
@@ -560,10 +609,8 @@ async function handleClientChange() {
         }
     }
     
-    // إعادة رسم المنتجات عشان تظهر بالأسعار الجديدة
     renderProducts();
 
-    // تحديث أسعار المنتجات اللي في السلة أوتوماتيك
     for (let id in cart) {
         let p = products.find(x => x.id === id);
         if (p) {
@@ -590,7 +637,6 @@ function renderProducts() {
   grid.innerHTML = filtered.map((p, index) => {
     const colorScheme = cardColors[index % cardColors.length];
     
-    // سحب السعر المخصص لو الشركة ليها سعر للمنتج ده
     let displayPrice = activeClientPrices[p.id] !== undefined ? activeClientPrices[p.id] : p.base_price;
     let isDiscounted = activeClientPrices[p.id] !== undefined && activeClientPrices[p.id] < p.base_price;
     
@@ -619,7 +665,6 @@ document.getElementById("productSearch").addEventListener("keypress", (e) => {
 
       const p = products.find(x => x.barcode === itemCode);
       if (p) {
-        // تحديد السعر الفعلي
         let currentPrice = activeClientPrices[p.id] !== undefined ? activeClientPrices[p.id] : p.base_price;
         if(cart[p.id]) cart[p.id].qty += weightInKg; 
         else cart[p.id] = { ...p, qty: weightInKg, base_price: currentPrice };
@@ -674,7 +719,6 @@ function resetCartUI() {
   document.getElementById("discountPercent").value = ""; 
   document.getElementById("discountAmount").value = ""; 
   
-  // تصفير الشركة
   document.getElementById("b2bClientSelect").value = "";
   handleClientChange();
 
@@ -697,17 +741,39 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
   btn.disabled = true; btn.innerHTML = "جاري الحفظ والطباعة... ⏳";
   btn.className = "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-gray-500";
 
-  // سحب اسم الشركة لو تم اختيارها، أو اسم العميل اليدوي
   const selectEl = document.getElementById("b2bClientSelect");
   const selectedCompanyName = selectEl.options[selectEl.selectedIndex].text;
   let custName = document.getElementById("customerName").value;
-  if (!custName && selectEl.value) { custName = selectedCompanyName; } // لو مأدخلش اسم عميل يدوي، حط اسم الشركة
+  if (!custName && selectEl.value) { custName = selectedCompanyName; } 
   else if (!custName) { custName = "عميل نقدي"; }
 
   const notes = document.getElementById("orderNotes").value;
   const dPct = parseFloat(document.getElementById("discountPercent").value) || 0;
   const dAmt = parseFloat(document.getElementById("discountAmount").value) || 0;
   const receiptNum = EDITING_ORDER_ID ? EDITING_RECEIPT_NUM : `R-${Date.now()}`;
+
+  // === وضع الأوفلاين 📡 ===
+  if (!navigator.onLine) {
+      const offlineOrderData = {
+          id: 'local_' + Date.now(),
+          branch_id: CURRENT_BRANCH, cashier_id: CURRENT_USER.id, receipt_number: receiptNum,
+          total_amount: total, customer_name: custName, notes: notes, 
+          discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash',
+          client_id: selectEl.value || null,
+          created_at: new Date().toISOString(),
+          items: entries.map(e => ({ product_id: e.id, quantity: e.qty, unit_price: e.base_price }))
+      };
+      
+      offlineOrders.push(offlineOrderData);
+      localStorage.setItem("offlineOrders", JSON.stringify(offlineOrders));
+      
+      printReceipt(receiptNum, entries, custName, notes, dAmt);
+      resetCartUI(); closeKeyboard();
+      
+      btn.disabled = false; btn.innerHTML = "تأكيد وطباعة 🖨️";
+      btn.className = "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-green-600 hover:bg-green-700";
+      return; // وقف الكود هنا عشان ميروحش للسيرفر المقطوع
+  }
 
   try {
     let targetOrderId = null;
@@ -716,7 +782,7 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
         const { error: updateError } = await supabaseClient.from("orders").update({
             total_amount: total, customer_name: custName, notes: notes, 
             discount_percentage: dPct, discount_amount: dAmt,
-            client_id: selectEl.value || null // حفظ الـ ID بتاع الشركة لو في
+            client_id: selectEl.value || null 
         }).eq("id", EDITING_ORDER_ID);
         if(updateError) throw updateError;
         
@@ -727,7 +793,7 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
           branch_id: CURRENT_BRANCH, cashier_id: CURRENT_USER.id, receipt_number: receiptNum,
           total_amount: total, customer_name: custName, notes: notes, 
           discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash',
-          client_id: selectEl.value || null // حفظ الـ ID بتاع الشركة لو في
+          client_id: selectEl.value || null 
         }).select().single();
         if(error) throw error;
         
@@ -748,7 +814,12 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
   }
 });
 
-function openEditOrderModal() { document.getElementById('editOrderModal').classList.add("open"); document.getElementById('searchReceiptInput').value = ""; document.getElementById('searchReceiptInput').focus(); }
+function openEditOrderModal() {
+    if (!navigator.onLine) return alert("لا يمكنك البحث عن فواتير قديمة أثناء انقطاع الإنترنت!");
+    document.getElementById('editOrderModal').classList.add("open"); 
+    document.getElementById('searchReceiptInput').value = ""; 
+    document.getElementById('searchReceiptInput').focus(); 
+}
 function closeEditOrderModal() { document.getElementById('editOrderModal').classList.remove("open"); closeKeyboard(); }
 
 async function searchOrderForEdit() {
@@ -768,10 +839,9 @@ async function searchOrderForEdit() {
             cart[item.product_id] = { id: item.product_id, name: item.products.name, base_price: item.unit_price, qty: item.quantity, barcode: item.products.barcode };
         });
 
-        // استرجاع اسم الشركة لو كانت متسجلة باسمها
         if (order.client_id) {
             document.getElementById("b2bClientSelect").value = order.client_id;
-            await handleClientChange(); // عشان يسحب الأسعار الخاصة ويعرضها صح
+            await handleClientChange(); 
         } else {
             document.getElementById("b2bClientSelect").value = "";
             await handleClientChange();
@@ -793,7 +863,10 @@ async function searchOrderForEdit() {
     finally { btn.disabled = false; btn.textContent = "بحث واسترجاع للسلة"; }
 }
 
-document.getElementById("endShiftBtn").addEventListener("click", () => { document.getElementById("endShiftModal").classList.add("open"); });
+document.getElementById("endShiftBtn").addEventListener("click", () => { 
+    if (!navigator.onLine) return alert("لا يمكنك إغلاق الوردية أثناء انقطاع الإنترنت! يرجى الانتظار حتى عودة الاتصال.");
+    document.getElementById("endShiftModal").classList.add("open"); 
+});
 
 document.getElementById("confirmEndShiftBtn").addEventListener("click", async () => {
   const actualCash = document.getElementById("actualCashInput").value;
