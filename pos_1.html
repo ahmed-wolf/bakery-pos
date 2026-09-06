@@ -175,8 +175,9 @@
         <h3 class="font-bold text-xl">🔍 بحث عن فاتورة لتعديلها</h3>
         <button onclick="closeEditOrderModal()" class="text-gray-500 font-bold hover:text-red-500 text-xl">✕</button>
     </div>
-    <p class="text-sm text-gray-600 mb-4">اكتب رقم الفاتورة (مثال: R-123456789) لاسترجاعها للسلة والتعديل عليها.</p>
-    <input type="text" id="searchReceiptInput" class="form-input text-center text-lg py-3 mb-4" placeholder="رقم الفاتورة..." autocomplete="off">
+    <!-- تم تعديل الوصف ليناسب الأرقام فقط -->
+    <p class="text-sm text-gray-600 mb-4">اكتب رقم الفاتورة (أرقام فقط) لاسترجاعها للسلة والتعديل عليها.</p>
+    <input type="text" inputmode="numeric" id="searchReceiptInput" class="form-input text-center text-lg py-3 mb-4" placeholder="مثال: 172554890..." autocomplete="off">
     <button id="searchOrderBtn" onclick="searchOrderForEdit()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors">بحث واسترجاع للسلة</button>
   </div>
 </div>
@@ -222,7 +223,7 @@
 const SUPABASE_URL = "https://rjhsjekwixavydzkghqt.supabase.co";
 const SUPABASE_KEY = "sb_publishable_lHjuLBBq_tr59ziXYvFSag_UMPkGMkj";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let CURRENT_USER = null; let CURRENT_BRANCH = null; let CURRENT_SHIFT = null;
+let CURRENT_USER = null; let CURRENT_BRANCH = null; let CURRENT_SHIFT = null; let CURRENT_CASHIER_NAME = "";
 let products = []; let cart = {};
 let subtotal = 0; let total = 0;
 
@@ -334,16 +335,12 @@ function applyDiscount(source) {
     document.getElementById("totalVal").textContent = total.toFixed(2) + " ج";
 }
 
-// === إعدادات الكيبورد الذكي القوية ===
-// كل حقل (رقمي أو نصي) بقى ليه "دفتر" خاص بيه بيتبني حرف حرف من ضغطات onKeyPress مباشرة،
-// من غير أي اعتماد على الذاكرة الداخلية لمكتبة الكيبورد (اللي كانت بتفلت وتسبب حروف/أرقام غلط ومسح مش شغال)
 let keyboard;
 let selectedInputName = "productSearch"; 
 
-const numericFieldIds = ['discountPercent', 'discountAmount', 'startShiftCashInput', 'actualCashInput'];
-let numericBuffers = { discountPercent: "", discountAmount: "", startShiftCashInput: "", actualCashInput: "" };
-
-// دفتر عام لكل الحقول النصية (بحث، اسم عميل، ملاحظات، بحث فاتورة...)
+// تم إضافة حقل البحث للفواتير هنا عشان الكيبورد يعامله معاملة الأرقام ويطلع النامباد
+const numericFieldIds = ['discountPercent', 'discountAmount', 'startShiftCashInput', 'actualCashInput', 'searchReceiptInput'];
+let numericBuffers = { discountPercent: "", discountAmount: "", startShiftCashInput: "", actualCashInput: "", searchReceiptInput: "" };
 let textBuffers = {};
 
 function applyBufferToField(fieldId) {
@@ -376,6 +373,9 @@ document.getElementById("startShiftCashInput").addEventListener("input", (e) => 
 });
 document.getElementById("actualCashInput").addEventListener("input", (e) => {
     numericBuffers.actualCashInput = e.target.value;
+});
+document.getElementById("searchReceiptInput").addEventListener("input", (e) => {
+    numericBuffers.searchReceiptInput = e.target.value;
 });
 
 const layoutArabic = {
@@ -423,7 +423,6 @@ function closeKeyboard() {
     document.querySelectorAll('.modal-overlay').forEach(m => {
         m.style.alignItems = 'center'; m.style.paddingTop = '0px';
     });
-    // مسح الـ Focus عشان لما تضغط تاني يشتغل
     if (document.activeElement && document.activeElement.classList.contains('form-input')) {
         document.activeElement.blur();
     }
@@ -457,7 +456,6 @@ managerBox.addEventListener("keydown", (e) => {
     }
 });
 
-// === تجهيز كل حقول النموذج: الفوكس بيبتدي الدفتر الخاص بالحقل، والكتابة الفعلية (لاب توب) بتتزامن مع الدفتر ===
 document.querySelectorAll('.form-input').forEach(input => {
   if (input.id === 'managerCodeBox') return; 
 
@@ -475,7 +473,6 @@ document.querySelectorAll('.form-input').forEach(input => {
     showKeyboardWithScroll(e.target);
   });
 
-  // مزامنة الكتابة الفعلية من كيبورد اللاب توب مع الدفاتر (الكيبورد التاتش بقى مستقل تمامًا وبيتعامل من onKeyPress بس)
   input.addEventListener("input", (e) => {
       if (numericFieldIds.includes(e.target.id)) {
           numericBuffers[e.target.id] = e.target.value;
@@ -488,7 +485,6 @@ document.querySelectorAll('.form-input').forEach(input => {
   });
 });
 
-// الكيبورد التاتش بقى مالوش أي دور هنا خالص، كل حاجة بقت بتتعمل من onKeyPress
 function onChange(input) {
   return;
 }
@@ -502,7 +498,6 @@ function onKeyPress(button) {
       return;
   }
 
-  // === الخانات الرقمية (خصم %، خصم ج، العهدة، الجرد الفعلي) ===
   if (numericFieldIds.includes(selectedInputName)) {
       let buf = numericBuffers[selectedInputName] || "";
       if (button === '{bksp}') buf = buf.slice(0, -1);
@@ -513,6 +508,7 @@ function onKeyPress(button) {
           applyBufferToField(selectedInputName);
           if (selectedInputName === 'startShiftCashInput') document.getElementById("confirmStartShiftBtn").click();
           else if (selectedInputName === 'actualCashInput') document.getElementById("confirmEndShiftBtn").click();
+          else if (selectedInputName === 'searchReceiptInput') searchOrderForEdit();
           closeKeyboard();
           return;
       }
@@ -521,7 +517,6 @@ function onKeyPress(button) {
       return;
   }
 
-  // === باقي كل حقول النص العادية (بحث، اسم عميل، ملاحظات، بحث فاتورة) ===
   let buf = textBuffers[selectedInputName] || "";
 
   if (button === '{bksp}') {
@@ -538,7 +533,6 @@ function onKeyPress(button) {
       closeKeyboard();
       return;
   } else if (!button.startsWith('{')) {
-      // أي زرار حرف عادي (عربي أو رقم أو علامة)، شامل الأزرار اللي بترجع أكتر من حرف زي "لا"
       buf += button;
   }
 
@@ -546,7 +540,6 @@ function onKeyPress(button) {
   applyTextBufferToField(selectedInputName);
 }
 
-// مسح شريط البحث عن طريق زرار الـ ✕
 function clearSearchField() {
     const searchInput = document.getElementById("productSearch");
     searchInput.value = "";
@@ -610,6 +603,8 @@ async function init() {
   
   const { data: staff } = await supabaseClient.from("staff").select("branch_id, full_name, role").eq("id", CURRENT_USER.id).single();
   CURRENT_BRANCH = staff.branch_id;
+  // أخذ اسم الموظف الحالي لطباعته في الفاتورة
+  CURRENT_CASHIER_NAME = staff.full_name || "كاشير";
 
   if (staff.role === 'admin') document.getElementById('returnAdminBtn').classList.remove('hidden');
 
@@ -689,7 +684,6 @@ async function loadProducts() {
   renderProducts();
 }
 
-// === دالة رسم المنتجات الآمنة من الأخطاء ===
 function renderProducts() {
   const searchInput = document.getElementById("productSearch");
   const search = searchInput.value.toLowerCase().trim();
@@ -702,7 +696,6 @@ function renderProducts() {
 
   const grid = document.getElementById("productGrid");
   
-  // فلترة ذكية مبتضربش إيرور لو اسم المنتج مش موجود
   const filtered = products.filter(p => {
       if (!search) return true;
       const nameMatch = p.name && p.name.toLowerCase().includes(search);
@@ -731,7 +724,6 @@ function renderProducts() {
   `}).join("");
 }
 
-// === البحث الذكي والباركود ===
 document.getElementById("productSearch").addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
     e.preventDefault(); 
@@ -820,7 +812,7 @@ function resetCartUI() {
   handleClientChange();
 
   numericBuffers.discountPercent = ""; numericBuffers.discountAmount = "";
-  textBuffers.customerName = ""; textBuffers.orderNotes = "";
+  numericBuffers.searchReceiptInput = ""; textBuffers.customerName = ""; textBuffers.orderNotes = "";
   updateCart(); clearMultiplier();
   EDITING_ORDER_ID = null; EDITING_RECEIPT_NUM = null;
   clearSearchField(); 
@@ -852,7 +844,9 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
   const notes = document.getElementById("orderNotes").value;
   const dPct = parseFloat(document.getElementById("discountPercent").value) || 0;
   const dAmt = parseFloat(document.getElementById("discountAmount").value) || 0;
-  const receiptNum = EDITING_ORDER_ID ? EDITING_RECEIPT_NUM : `R-${Date.now()}`;
+  
+  // شيلنا حرف الـ R- من الفواتير الجديدة عشان تبقى أرقام بس
+  const receiptNum = EDITING_ORDER_ID ? EDITING_RECEIPT_NUM : Date.now().toString();
 
   if (!navigator.onLine) {
       const offlineOrderData = {
@@ -920,18 +914,27 @@ function openEditOrderModal() {
     if (!navigator.onLine) return alert("لا يمكنك البحث عن فواتير قديمة أثناء انقطاع الإنترنت!");
     document.getElementById('editOrderModal').classList.add("open"); 
     document.getElementById('searchReceiptInput').value = ""; 
-    textBuffers.searchReceiptInput = "";
+    numericBuffers.searchReceiptInput = ""; 
     document.getElementById('searchReceiptInput').focus(); 
 }
 function closeEditOrderModal() { document.getElementById('editOrderModal').classList.remove("open"); closeKeyboard(); }
 
+// دالة البحث بقت ذكية وتقبل الأرقام بس وتدور على النوعين
 async function searchOrderForEdit() {
-    const receiptNum = document.getElementById('searchReceiptInput').value.trim();
-    if(!receiptNum) return alert("اكتب رقم الفاتورة الأول!");
+    const rawInput = document.getElementById('searchReceiptInput').value.trim();
+    if(!rawInput) return alert("اكتب رقم الفاتورة الأول!");
     const btn = document.getElementById('searchOrderBtn'); btn.disabled = true; btn.textContent = "جاري البحث...";
 
+    let cleanNum = rawInput.replace("R-", ""); // لو كتبها بالغلط تتشال عشان نوحد البحث
+
     try {
-        const { data: order, error: orderError } = await supabaseClient.from("orders").select("*").eq("receipt_number", receiptNum).single();
+        // بيبحث عن الرقم السادة أو الرقم اللي قبله R-
+        const { data: order, error: orderError } = await supabaseClient
+            .from("orders")
+            .select("*")
+            .or(`receipt_number.eq.${cleanNum},receipt_number.eq.R-${cleanNum}`)
+            .single();
+            
         if(orderError || !order) throw new Error("الفاتورة دي مش موجودة أو الرقم غلط!");
 
         const { data: items, error: itemsError } = await supabaseClient.from("order_items").select("*, products(*)").eq("order_id", order.id);
@@ -990,14 +993,31 @@ document.getElementById("confirmEndShiftBtn").addEventListener("click", async ()
   setTimeout(async () => { await supabaseClient.auth.signOut(); window.open('', '_self', ''); window.close(); setTimeout(() => { window.location.href = "index.html"; }, 500); }, 2000);
 });
 
+// دالة لتنسيق التاريخ دايماً بيوم/شهر/سنة
+function formatDDMMYYYY(dateObj) {
+  const d = new Date(dateObj);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 function printReceipt(num, items, cust, note, disc) {
   const nameEn = escapeHtml(branchSettings.bakery_name);
   const logoUrl = escapeHtml(branchSettings.logo_url);
   const welcomeMsg = escapeHtml(branchSettings.welcome_message);
 
+  const now = new Date();
+  const dateStr = formatDDMMYYYY(now);
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); 
+
   let html = ``;
   if (logoUrl) html += `<img src="${logoUrl}" id="receiptLogo" class="r-logo">`;
-  html += `<div class="r-title">${nameEn}</div><div class="r-divider"></div><div class="r-row"><span>رقم:</span><span>${escapeHtml(num)}</span></div>`;
+  html += `<div class="r-title">${nameEn}</div>`;
+  html += `<div class="r-divider"></div>`;
+  html += `<div class="r-row"><span>رقم:</span><span style="font-size: 11px;">${escapeHtml(num)}</span></div>`;
+  html += `<div class="r-row"><span>التاريخ:</span><span dir="ltr" style="font-size: 11px;">${dateStr} ${timeStr}</span></div>`;
+  html += `<div class="r-row"><span>الكاشير:</span><span>${escapeHtml(CURRENT_CASHIER_NAME)}</span></div>`;
   if(cust) html += `<div class="r-row"><span>العميل:</span><span>${escapeHtml(cust)}</span></div>`;
   html += `<div class="r-divider"></div><table><tr><th>الصنف</th><th>سعر</th><th>ك</th><th>ج</th></tr>`;
   items.forEach(i => html += `<tr><td>${escapeHtml(i.name)}</td><td>${Number(i.base_price).toFixed(2)}</td><td>${i.qty}</td><td>${(i.base_price*i.qty).toFixed(2)}</td></tr>`);  
@@ -1008,13 +1028,26 @@ function printReceipt(num, items, cust, note, disc) {
   html += `<div class="r-divider"></div><div class="text-center font-bold" style="margin-top:5px;">${welcomeMsg}</div>`;
   
   document.getElementById("printArea").innerHTML = html;
-  if (logoUrl) { let imgElement = document.getElementById("receiptLogo"); imgElement.onload = function() { window.print(); }; imgElement.onerror = function() { window.print(); }; } else { window.print(); }
+  if (logoUrl) { 
+      let imgElement = document.getElementById("receiptLogo"); 
+      imgElement.onload = function() { window.print(); }; 
+      imgElement.onerror = function() { window.print(); }; 
+  } else { 
+      window.print(); 
+  }
 }
 
 function printZReport(sales, actual, opening) {
+  const openDateStr = formatDDMMYYYY(CURRENT_SHIFT.opened_at);
+  const openTimeStr = new Date(CURRENT_SHIFT.opened_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  const closeDateStr = formatDDMMYYYY(new Date());
+  const closeTimeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
   const html = `<div class="r-title">تقرير إغلاق الوردية (Z-Report)</div><div class="r-divider"></div>
-  <div class="r-row"><span>وقت الفتح:</span><span dir="ltr">${new Date(CURRENT_SHIFT.opened_at).toLocaleString('ar-EG')}</span></div>
-  <div class="r-row"><span>وقت الإغلاق:</span><span dir="ltr">${new Date().toLocaleString('ar-EG')}</span></div>
+  <div class="r-row"><span>الكاشير:</span><span>${escapeHtml(CURRENT_CASHIER_NAME)}</span></div>
+  <div class="r-row"><span>وقت الفتح:</span><span dir="ltr">${openDateStr} ${openTimeStr}</span></div>
+  <div class="r-row"><span>وقت الإغلاق:</span><span dir="ltr">${closeDateStr} ${closeTimeStr}</span></div>
   <div class="r-divider"></div>
   <div class="r-row"><span>العهدة الافتتاحية:</span><span>${Number(opening).toFixed(2)}</span></div>
   <div class="r-row"><span>إجمالي المبيعات:</span><span>${Number(sales).toFixed(2)}</span></div>
@@ -1023,6 +1056,7 @@ function printZReport(sales, actual, opening) {
   <div class="r-row font-bold"><span>الفعلي (الجرد):</span><span>${Number(actual).toFixed(2)}</span></div>
   <div class="r-row font-bold"><span>العجز/الزيادة:</span><span>${(Number(actual) - (Number(sales) + Number(opening))).toFixed(2)}</span></div>
   <div class="r-divider"></div><div class="text-center">تم إغلاق الوردية بنجاح</div>`;
+  
   document.getElementById("printArea").innerHTML = html; window.print();
 }
 
