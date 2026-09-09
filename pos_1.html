@@ -90,6 +90,18 @@
   </div>
 </header>
 
+<!-- شريط الإنذارات -->
+<div id="alarmBanner" class="hidden bg-red-600 text-white px-4 py-3 flex justify-between items-center shadow-lg shrink-0 z-50">
+    <div class="flex items-center gap-3">
+        <span class="text-2xl animate-bounce">⏰</span>
+        <div>
+            <h4 class="font-bold text-lg">تنبيه تسليم أوردر!</h4>
+            <p id="alarmMessage" class="text-sm font-bold"></p>
+        </div>
+    </div>
+    <button onclick="dismissAlarm()" class="bg-white text-red-600 font-bold px-4 py-2 rounded-lg text-sm hover:bg-gray-100">إخفاء الإنذار</button>
+</div>
+
 <div class="flex-1 flex overflow-hidden">
   
   <main class="flex-1 flex flex-col p-4 border-l border-gray-300 relative">
@@ -141,6 +153,12 @@
           <option value="" class="text-black">-- بيع عادي (بدون شركة) --</option>
       </select>
 
+      <!-- موعد التسليم الجديد -->
+      <div class="mb-2 p-2 border border-yellow-500 rounded-lg bg-yellow-900 bg-opacity-20">
+          <label class="text-xs font-bold text-yellow-400 mb-1 block">⏰ موعد تسليم الأوردر (للحجوزات)</label>
+          <input type="datetime-local" id="deliveryTime" class="form-input bg-transparent text-white border-gray-500 font-bold w-full">
+      </div>
+
       <input type="text" id="customerName" placeholder="👤 اسم العميل / المستلم (اختياري)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
       <input type="text" id="orderNotes" placeholder="📝 ملاحظات (مثال: خصم ضيافة)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
       
@@ -175,7 +193,6 @@
         <h3 class="font-bold text-xl">🔍 بحث عن فاتورة لتعديلها</h3>
         <button onclick="closeEditOrderModal()" class="text-gray-500 font-bold hover:text-red-500 text-xl">✕</button>
     </div>
-    <!-- تم تعديل الوصف ليناسب الأرقام فقط -->
     <p class="text-sm text-gray-600 mb-4">اكتب رقم الفاتورة (أرقام فقط) لاسترجاعها للسلة والتعديل عليها.</p>
     <input type="text" inputmode="numeric" id="searchReceiptInput" class="form-input text-center text-lg py-3 mb-4" placeholder="مثال: 172554890..." autocomplete="off">
     <button id="searchOrderBtn" onclick="searchOrderForEdit()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors">بحث واسترجاع للسلة</button>
@@ -193,6 +210,31 @@
         <button onclick="executeShiftSales()" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors">تأكيد</button>
         <button onclick="closeAdminModal()" class="flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">إلغاء</button>
     </div>
+  </div>
+</div>
+
+<!-- مودال الجرد اللحظي الجديد -->
+<div id="realtimeJardModal" class="modal-overlay">
+  <div class="modal-content text-black w-[450px]">
+    <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <h3 class="font-bold text-xl text-teal-700">📊 جرد الوردية اللحظي</h3>
+        <button onclick="document.getElementById('realtimeJardModal').classList.remove('open')" class="text-red-500 font-bold text-xl">✕</button>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-4 text-center">
+        <div class="bg-gray-100 p-3 rounded-lg">
+            <p class="text-xs text-gray-500 font-bold">العهدة الافتتاحية</p>
+            <p id="jardOpening" class="font-black text-xl">0.00 ج</p>
+        </div>
+        <div class="bg-gray-100 p-3 rounded-lg">
+            <p class="text-xs text-gray-500 font-bold">مبيعات الشيفت</p>
+            <p id="jardSales" class="font-black text-xl text-green-600">0.00 ج</p>
+        </div>
+    </div>
+    <div class="bg-teal-50 p-4 rounded-xl text-center border border-teal-200">
+        <p class="text-sm text-teal-800 font-bold">الإجمالي المتوقع بالدرج حالياً</p>
+        <p id="jardExpected" class="font-black text-3xl text-teal-600 mt-1">0.00 ج</p>
+    </div>
+    <button onclick="executeShiftSales(true)" class="w-full mt-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-lg transition-colors">🔄 تحديث البيانات</button>
   </div>
 </div>
 
@@ -232,10 +274,11 @@ let EDITING_RECEIPT_NUM = null;
 
 let branchSettings = { bakery_name: "مخبز العائلة", logo_url: "", welcome_message: "شكراً لزيارتكم" };
 
-// === متغيرات الأوفلاين والـ B2B ===
+// === متغيرات الأوفلاين والـ B2B والإنذارات ===
 let b2bClients = [];
 let activeClientPrices = {};
 let offlineOrders = JSON.parse(localStorage.getItem("offlineOrders") || "[]");
+let activeAlarms = JSON.parse(localStorage.getItem('dismissedAlarms') || "[]");
 
 function updateConnectionStatus() {
     const statusBadge = document.getElementById("connectionStatus");
@@ -277,6 +320,53 @@ async function syncOfflineOrders() {
     offlineOrders = remainingOrders;
     localStorage.setItem("offlineOrders", JSON.stringify(offlineOrders));
 }
+
+// === نظام الإنذارات ===
+async function checkOrderAlarms() {
+    if (!navigator.onLine) return; 
+    
+    try {
+        const { data: futureOrders } = await supabaseClient.from("orders")
+            .select("receipt_number, customer_name, delivery_time")
+            .not("delivery_time", "is", null)
+            .gte("delivery_time", new Date().toISOString());
+            
+        if (!futureOrders) return;
+
+        const now = new Date().getTime();
+
+        for (let order of futureOrders) {
+            const deliveryTime = new Date(order.delivery_time).getTime();
+            const hoursLeft = (deliveryTime - now) / (1000 * 60 * 60);
+
+            if ((hoursLeft <= 8.5 && hoursLeft >= 7.5) || (hoursLeft <= 4.5 && hoursLeft >= 3.5)) {
+                const alarmId = `${order.receipt_number}_${Math.round(hoursLeft)}`;
+                
+                if (!activeAlarms.includes(alarmId)) {
+                    document.getElementById("alarmMessage").textContent = `أوردر العميل (${order.customer_name || 'بدون اسم'}) موعد تسليمه بعد ${Math.round(hoursLeft)} ساعات! رقم الفاتورة: ${order.receipt_number}`;
+                    document.getElementById("alarmBanner").classList.remove("hidden");
+                    document.getElementById("alarmBanner").dataset.currentAlarmId = alarmId;
+                    
+                    let audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                    audio.play();
+                    break; 
+                }
+            }
+        }
+    } catch (e) { console.error("Alarm check failed", e); }
+}
+
+function dismissAlarm() {
+    const alarmId = document.getElementById("alarmBanner").dataset.currentAlarmId;
+    if (alarmId) {
+        activeAlarms.push(alarmId);
+        localStorage.setItem('dismissedAlarms', JSON.stringify(activeAlarms));
+    }
+    document.getElementById("alarmBanner").classList.add("hidden");
+}
+
+setInterval(checkOrderAlarms, 60000);
+setTimeout(checkOrderAlarms, 3000); 
 
 let currentMultiplierStr = "";
 
@@ -338,7 +428,6 @@ function applyDiscount(source) {
 let keyboard;
 let selectedInputName = "productSearch"; 
 
-// تم إضافة حقل البحث للفواتير هنا عشان الكيبورد يعامله معاملة الأرقام ويطلع النامباد
 const numericFieldIds = ['discountPercent', 'discountAmount', 'startShiftCashInput', 'actualCashInput', 'searchReceiptInput'];
 let numericBuffers = { discountPercent: "", discountAmount: "", startShiftCashInput: "", actualCashInput: "", searchReceiptInput: "" };
 let textBuffers = {};
@@ -485,9 +574,7 @@ document.querySelectorAll('.form-input').forEach(input => {
   });
 });
 
-function onChange(input) {
-  return;
-}
+function onChange(input) { return; }
 
 function onKeyPress(button) {
   if (selectedInputName === 'managerCodeBox') {
@@ -549,10 +636,6 @@ function clearSearchField() {
 }
 
 function openShiftSalesModal() {
-    if (!navigator.onLine) {
-        alert("يجب أن تكون متصلاً بالإنترنت لعمل جرد للوردية!");
-        return;
-    }
     document.getElementById('adminPassModal').classList.add("open");
     managerPassString = ""; updateFakeDots("");
     selectedInputName = 'managerCodeBox';
@@ -565,16 +648,35 @@ function openShiftSalesModal() {
 function closeAdminModal() { document.getElementById('adminPassModal').classList.remove("open"); closeKeyboard(); managerPassString = ""; }
 function closeEndShiftModal() { document.getElementById('endShiftModal').classList.remove('open'); closeKeyboard(); }
 
-async function executeShiftSales() {
-    if (managerPassString !== "2005") {
-        if(managerPassString) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
-        managerPassString = ""; updateFakeDots(""); return;
+// تحديث نظام الجرد عشان يشتغل بالمودال ويدمج الأوفلاين
+async function executeShiftSales(isRefresh = false) {
+    if (!isRefresh) {
+        if (managerPassString !== "2005") {
+            if(managerPassString) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
+            managerPassString = ""; updateFakeDots(""); return;
+        }
+        closeAdminModal();
     }
-    closeAdminModal();
+    
     try {
-        const { data: orders } = await supabaseClient.from("orders").select("total_amount").eq("cashier_id", CURRENT_USER.id).gte("created_at", CURRENT_SHIFT.opened_at);
-        const shiftTotal = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-        alert(`💰 مبيعات الشيفت الحالية: ${shiftTotal.toFixed(2)} ج\n💵 العهدة الافتتاحية: ${Number(CURRENT_SHIFT.opening_cash).toFixed(2)} ج\n\n📊 الإجمالي المتوقع بالدرج: ${(shiftTotal + Number(CURRENT_SHIFT.opening_cash)).toFixed(2)} ج`);
+        const opening = Number(CURRENT_SHIFT.opening_cash);
+        let shiftTotal = 0;
+        
+        if (navigator.onLine) {
+            const { data: orders } = await supabaseClient.from("orders").select("total_amount").eq("cashier_id", CURRENT_USER.id).gte("created_at", CURRENT_SHIFT.opened_at);
+            shiftTotal = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+        } else {
+            const localOrders = offlineOrders.filter(o => o.cashier_id === CURRENT_USER.id && new Date(o.created_at) >= new Date(CURRENT_SHIFT.opened_at));
+            shiftTotal = localOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+        }
+
+        const expected = shiftTotal + opening;
+
+        document.getElementById("jardOpening").textContent = opening.toFixed(2) + " ج";
+        document.getElementById("jardSales").textContent = shiftTotal.toFixed(2) + " ج";
+        document.getElementById("jardExpected").textContent = expected.toFixed(2) + " ج";
+        
+        document.getElementById("realtimeJardModal").classList.add("open");
     } catch (err) { alert("حدث خطأ في جلب البيانات."); }
 }
 
@@ -603,10 +705,10 @@ async function init() {
   
   const { data: staff } = await supabaseClient.from("staff").select("branch_id, full_name, role").eq("id", CURRENT_USER.id).single();
   CURRENT_BRANCH = staff.branch_id;
-  // أخذ اسم الموظف الحالي لطباعته في الفاتورة
   CURRENT_CASHIER_NAME = staff.full_name || "كاشير";
 
   if (staff.role === 'admin') document.getElementById('returnAdminBtn').classList.remove('hidden');
+  document.getElementById('returnAdminBtn').onclick = () => window.location.href = 'admin_4.html';
 
   const { data: settings } = await supabaseClient.from("branch_settings").select("*").eq("branch_id", CURRENT_BRANCH).maybeSingle();
   if (settings) {
@@ -805,6 +907,7 @@ function resetCartUI() {
   cart = {}; 
   document.getElementById("customerName").value = ""; 
   document.getElementById("orderNotes").value = "";
+  document.getElementById("deliveryTime").value = "";
   document.getElementById("discountPercent").value = ""; 
   document.getElementById("discountAmount").value = ""; 
   
@@ -824,90 +927,67 @@ function resetCartUI() {
 
 document.getElementById("cancelBtn").addEventListener("click", () => { resetCartUI(); closeKeyboard(); });
 
+// حفظ محلي سريع والطباعة في الأوفلاين والأونلاين
 document.getElementById("checkoutBtn").addEventListener("click", async () => {
-  const entries = Object.values(cart);
-  if(entries.length === 0) return alert("السلة فاضية!");
-  
-  const btn = document.getElementById("checkoutBtn");
-  btn.disabled = true; btn.innerHTML = "جاري الحفظ والطباعة... ⏳";
-  btn.className = "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-gray-500";
+    const entries = Object.values(cart);
+    if(entries.length === 0) return alert("السلة فاضية!");
+    
+    const btn = document.getElementById("checkoutBtn");
+    btn.disabled = true; btn.innerHTML = "جاري الحفظ... ⏳";
+    btn.className = "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-gray-500";
 
-  const selectEl = document.getElementById("b2bClientSelect");
-  let selectedClientId = selectEl.value;
-  if (selectedClientId === "") selectedClientId = null; 
+    const selectEl = document.getElementById("b2bClientSelect");
+    let selectedClientId = selectEl.value || null; 
+    
+    let custName = document.getElementById("customerName").value;
+    if (!custName && selectedClientId) { custName = selectEl.options[selectEl.selectedIndex].text; } 
+    else if (!custName) { custName = "عميل نقدي"; }
 
-  const selectedCompanyName = selectEl.options[selectEl.selectedIndex].text;
-  let custName = document.getElementById("customerName").value;
-  if (!custName && selectedClientId) { custName = selectedCompanyName; } 
-  else if (!custName) { custName = "عميل نقدي"; }
+    const notes = document.getElementById("orderNotes").value;
+    const deliveryTime = document.getElementById("deliveryTime").value; 
+    const dPct = parseFloat(document.getElementById("discountPercent").value) || 0;
+    const dAmt = parseFloat(document.getElementById("discountAmount").value) || 0;
+    const receiptNum = EDITING_ORDER_ID ? EDITING_RECEIPT_NUM : Date.now().toString();
 
-  const notes = document.getElementById("orderNotes").value;
-  const dPct = parseFloat(document.getElementById("discountPercent").value) || 0;
-  const dAmt = parseFloat(document.getElementById("discountAmount").value) || 0;
-  
-  // شيلنا حرف الـ R- من الفواتير الجديدة عشان تبقى أرقام بس
-  const receiptNum = EDITING_ORDER_ID ? EDITING_RECEIPT_NUM : Date.now().toString();
+    const orderData = {
+        id: EDITING_ORDER_ID || 'local_' + Date.now(),
+        branch_id: CURRENT_BRANCH, cashier_id: CURRENT_USER.id, receipt_number: receiptNum,
+        total_amount: total, customer_name: custName, notes: notes, 
+        discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash',
+        client_id: selectedClientId, delivery_time: deliveryTime || null,
+        created_at: new Date().toISOString(),
+        items: entries.map(e => ({ product_id: e.id, quantity: e.qty, unit_price: e.base_price }))
+    };
 
-  if (!navigator.onLine) {
-      const offlineOrderData = {
-          id: 'local_' + Date.now(),
-          branch_id: CURRENT_BRANCH, cashier_id: CURRENT_USER.id, receipt_number: receiptNum,
-          total_amount: total, customer_name: custName, notes: notes, 
-          discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash',
-          client_id: selectedClientId,
-          created_at: new Date().toISOString(),
-          items: entries.map(e => ({ product_id: e.id, quantity: e.qty, unit_price: e.base_price }))
-      };
-      
-      offlineOrders.push(offlineOrderData);
-      localStorage.setItem("offlineOrders", JSON.stringify(offlineOrders));
-      
-      printReceipt(receiptNum, entries, custName, notes, dAmt);
-      resetCartUI(); closeKeyboard();
-      
-      btn.disabled = false; btn.innerHTML = "تأكيد وطباعة 🖨️";
-      btn.className = "w-full py-4 rounded-2xl font-black text-xl bg-green-600 text-white hover:bg-green-700 mb-2 transition-colors shadow-lg";
-      return; 
-  }
-
-  try {
-    let targetOrderId = null;
-
-    if (EDITING_ORDER_ID) {
-        const { error: updateError } = await supabaseClient.from("orders").update({
-            total_amount: total, customer_name: custName, notes: notes, 
-            discount_percentage: dPct, discount_amount: dAmt,
-            client_id: selectedClientId 
-        }).eq("id", EDITING_ORDER_ID);
-        if(updateError) throw updateError;
-        
-        targetOrderId = EDITING_ORDER_ID;
-        await supabaseClient.from("order_items").delete().eq("order_id", targetOrderId);
+    if(!EDITING_ORDER_ID) {
+        offlineOrders.push(orderData);
+        localStorage.setItem("offlineOrders", JSON.stringify(offlineOrders));
     } else {
-        const { data: order, error } = await supabaseClient.from("orders").insert({
-          branch_id: CURRENT_BRANCH, cashier_id: CURRENT_USER.id, receipt_number: receiptNum,
-          total_amount: total, customer_name: custName, notes: notes, 
-          discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash',
-          client_id: selectedClientId 
-        }).select().single();
-        if(error) throw error;
-        
-        targetOrderId = order.id;
+        // لو بنعدل مش هنضيفه في الأوفلاين، لازم يكون أونلاين للتعديل
+        if (navigator.onLine) {
+            try {
+                await supabaseClient.from("orders").update({
+                    total_amount: total, customer_name: custName, notes: notes, 
+                    discount_percentage: dPct, discount_amount: dAmt,
+                    client_id: selectedClientId, delivery_time: deliveryTime || null
+                }).eq("id", EDITING_ORDER_ID);
+                await supabaseClient.from("order_items").delete().eq("order_id", EDITING_ORDER_ID);
+                const orderItems = entries.map(e => ({ order_id: EDITING_ORDER_ID, product_id: e.id, quantity: e.qty, unit_price: e.base_price }));
+                await supabaseClient.from("order_items").insert(orderItems);
+            } catch (err) { alert("حدث خطأ أثناء تعديل الفاتورة أونلاين"); }
+        } else {
+            alert("لا يمكنك تعديل فاتورة قديمة بدون إنترنت!");
+            btn.disabled = false; btn.innerHTML = "تأكيد وطباعة 🖨️";
+            return;
+        }
     }
-
-    const orderItems = entries.map(e => ({ order_id: targetOrderId, product_id: e.id, quantity: e.qty, unit_price: e.base_price }));
-    const { error: itemsError } = await supabaseClient.from("order_items").insert(orderItems);
-    if(itemsError) throw itemsError;
 
     printReceipt(receiptNum, entries, custName, notes, dAmt);
     resetCartUI(); closeKeyboard();
-
-  } catch (err) {
-    console.error("Order Save Error:", err);
-    alert("حدث خطأ أثناء الحفظ: " + (err.message || "تأكد من الاتصال بالإنترنت"));
-    btn.disabled = false; btn.innerHTML = EDITING_ORDER_ID ? "حفظ التعديل وطباعة 🖨️" : "تأكيد وطباعة 🖨️";
-    btn.className = EDITING_ORDER_ID ? "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-indigo-600 hover:bg-indigo-700" : "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-green-600 hover:bg-green-700 shadow-lg";
-  }
+    
+    if (navigator.onLine) {
+        syncOfflineOrders();
+    }
 });
 
 function openEditOrderModal() {
@@ -919,21 +999,16 @@ function openEditOrderModal() {
 }
 function closeEditOrderModal() { document.getElementById('editOrderModal').classList.remove("open"); closeKeyboard(); }
 
-// دالة البحث بقت ذكية وتقبل الأرقام بس وتدور على النوعين
 async function searchOrderForEdit() {
     const rawInput = document.getElementById('searchReceiptInput').value.trim();
     if(!rawInput) return alert("اكتب رقم الفاتورة الأول!");
     const btn = document.getElementById('searchOrderBtn'); btn.disabled = true; btn.textContent = "جاري البحث...";
 
-    let cleanNum = rawInput.replace("R-", ""); // لو كتبها بالغلط تتشال عشان نوحد البحث
+    let cleanNum = rawInput.replace("R-", ""); 
 
     try {
-        // بيبحث عن الرقم السادة أو الرقم اللي قبله R-
         const { data: order, error: orderError } = await supabaseClient
-            .from("orders")
-            .select("*")
-            .or(`receipt_number.eq.${cleanNum},receipt_number.eq.R-${cleanNum}`)
-            .single();
+            .from("orders").select("*").or(`receipt_number.eq.${cleanNum},receipt_number.eq.R-${cleanNum}`).single();
             
         if(orderError || !order) throw new Error("الفاتورة دي مش موجودة أو الرقم غلط!");
 
@@ -955,6 +1030,7 @@ async function searchOrderForEdit() {
 
         document.getElementById("customerName").value = order.customer_name === "عميل نقدي" ? "" : (order.customer_name || "");
         document.getElementById("orderNotes").value = order.notes || "";
+        if(order.delivery_time) document.getElementById("deliveryTime").value = order.delivery_time.slice(0,16);
         document.getElementById("discountPercent").value = order.discount_percentage || "";
         document.getElementById("discountAmount").value = order.discount_amount || "";
         numericBuffers.discountPercent = document.getElementById("discountPercent").value;
@@ -993,7 +1069,6 @@ document.getElementById("confirmEndShiftBtn").addEventListener("click", async ()
   setTimeout(async () => { await supabaseClient.auth.signOut(); window.open('', '_self', ''); window.close(); setTimeout(() => { window.location.href = "index.html"; }, 500); }, 2000);
 });
 
-// دالة لتنسيق التاريخ دايماً بيوم/شهر/سنة
 function formatDDMMYYYY(dateObj) {
   const d = new Date(dateObj);
   const day = String(d.getDate()).padStart(2, '0');
