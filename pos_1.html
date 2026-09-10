@@ -153,7 +153,7 @@
           <option value="" class="text-black">-- بيع عادي (بدون شركة) --</option>
       </select>
 
-      <!-- موعد التسليم الجديد -->
+      <!-- موعد التسليم للحجوزات -->
       <div class="mb-2 p-2 border border-yellow-500 rounded-lg bg-yellow-900 bg-opacity-20">
           <label class="text-xs font-bold text-yellow-400 mb-1 block">⏰ موعد تسليم الأوردر (للحجوزات)</label>
           <input type="datetime-local" id="deliveryTime" class="form-input bg-transparent text-white border-gray-500 font-bold w-full">
@@ -546,7 +546,7 @@ managerBox.addEventListener("keydown", (e) => {
 });
 
 document.querySelectorAll('.form-input').forEach(input => {
-  if (input.id === 'managerCodeBox') return; 
+  if (input.id === 'managerCodeBox' || input.id === 'deliveryTime') return; 
 
   input.addEventListener("focus", (e) => {
     selectedInputName = e.target.id;
@@ -648,7 +648,7 @@ function openShiftSalesModal() {
 function closeAdminModal() { document.getElementById('adminPassModal').classList.remove("open"); closeKeyboard(); managerPassString = ""; }
 function closeEndShiftModal() { document.getElementById('endShiftModal').classList.remove('open'); closeKeyboard(); }
 
-// تحديث نظام الجرد عشان يشتغل بالمودال ويدمج الأوفلاين
+// دمج الأونلاين والأوفلاين في الجرد بدقة
 async function executeShiftSales(isRefresh = false) {
     if (!isRefresh) {
         if (managerPassString !== "2005") {
@@ -660,15 +660,19 @@ async function executeShiftSales(isRefresh = false) {
     
     try {
         const opening = Number(CURRENT_SHIFT.opening_cash);
+        const shiftStartTime = CURRENT_SHIFT.opened_at || CURRENT_SHIFT.created_at;
         let shiftTotal = 0;
         
         if (navigator.onLine) {
-            const { data: orders } = await supabaseClient.from("orders").select("total_amount").eq("cashier_id", CURRENT_USER.id).gte("created_at", CURRENT_SHIFT.opened_at);
-            shiftTotal = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-        } else {
-            const localOrders = offlineOrders.filter(o => o.cashier_id === CURRENT_USER.id && new Date(o.created_at) >= new Date(CURRENT_SHIFT.opened_at));
-            shiftTotal = localOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+            const { data: orders } = await supabaseClient.from("orders")
+                .select("total_amount")
+                .eq("cashier_id", CURRENT_USER.id)
+                .gte("created_at", shiftStartTime);
+            if (orders) shiftTotal += orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
         }
+
+        const localOrders = offlineOrders.filter(o => o.cashier_id === CURRENT_USER.id && new Date(o.created_at) >= new Date(shiftStartTime));
+        shiftTotal += localOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
 
         const expected = shiftTotal + opening;
 
@@ -963,7 +967,6 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
         offlineOrders.push(orderData);
         localStorage.setItem("offlineOrders", JSON.stringify(offlineOrders));
     } else {
-        // لو بنعدل مش هنضيفه في الأوفلاين، لازم يكون أونلاين للتعديل
         if (navigator.onLine) {
             try {
                 await supabaseClient.from("orders").update({
@@ -1048,17 +1051,29 @@ async function searchOrderForEdit() {
 }
 
 document.getElementById("endShiftBtn").addEventListener("click", () => { 
-    if (!navigator.onLine) return alert("لا يمكنك إغلاق الوردية أثناء انقطاع الإنترنت! يرجى الانتظار حتى عودة الاتصال.");
+    if (!navigator.onLine && offlineOrders.length > 0) return alert("هناك فواتير قيد الحفظ! يرجى الانتظار حتى عودة الإنترنت لتقفيل الوردية بدقة.");
     document.getElementById("endShiftModal").classList.add("open"); 
 });
 
+// دمج المبيعات من السيرفر والأوفلاين في تقفيل الوردية
 document.getElementById("confirmEndShiftBtn").addEventListener("click", async () => {
   const actualCash = document.getElementById("actualCashInput").value;
   if(!actualCash) return alert("أدخل النقدية الفعلية!");
   const btn = document.getElementById("confirmEndShiftBtn"); btn.disabled = true; btn.textContent = "جاري الإغلاق...";
 
-  const { data: orders } = await supabaseClient.from("orders").select("total_amount").eq("cashier_id", CURRENT_USER.id).gte("created_at", CURRENT_SHIFT.opened_at);
-  const shiftTotal = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+  const shiftStartTime = CURRENT_SHIFT.opened_at || CURRENT_SHIFT.created_at;
+  let shiftTotal = 0;
+
+  if (navigator.onLine) {
+      const { data: orders } = await supabaseClient.from("orders")
+          .select("total_amount")
+          .eq("cashier_id", CURRENT_USER.id)
+          .gte("created_at", shiftStartTime);
+      if (orders) shiftTotal += orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+  }
+
+  const localOrders = offlineOrders.filter(o => o.cashier_id === CURRENT_USER.id && new Date(o.created_at) >= new Date(shiftStartTime));
+  shiftTotal += localOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
 
   await supabaseClient.from("cashier_shifts").update({
     status: "closed", closed_at: new Date().toISOString(), actual_cash: actualCash, expected_cash: shiftTotal + Number(CURRENT_SHIFT.opening_cash), total_sales: shiftTotal
