@@ -153,7 +153,6 @@
           <option value="" class="text-black">-- بيع عادي (بدون شركة) --</option>
       </select>
 
-      <!-- موعد التسليم للحجوزات -->
       <div class="mb-2 p-2 border border-yellow-500 rounded-lg bg-yellow-900 bg-opacity-20">
           <label class="text-xs font-bold text-yellow-400 mb-1 block">⏰ موعد تسليم الأوردر (للحجوزات)</label>
           <input type="datetime-local" id="deliveryTime" class="form-input bg-transparent text-white border-gray-500 font-bold w-full">
@@ -274,11 +273,31 @@ let EDITING_RECEIPT_NUM = null;
 
 let branchSettings = { bakery_name: "مخبز العائلة", logo_url: "", welcome_message: "شكراً لزيارتكم" };
 
-// === متغيرات الأوفلاين والـ B2B والإنذارات ===
+// === متغيرات الأوفلاين والجرد اللحظي الثابت ===
 let b2bClients = [];
 let activeClientPrices = {};
 let offlineOrders = JSON.parse(localStorage.getItem("offlineOrders") || "[]");
 let activeAlarms = JSON.parse(localStorage.getItem('dismissedAlarms') || "[]");
+
+// السجل المحلي للمبيعات (الحل السحري عشان الجرد ميضربش لو النت فصل وقت التقفيل)
+let shiftSalesLog = JSON.parse(localStorage.getItem("shiftSalesLog") || "{}");
+
+function logShiftSale(shiftId, receiptNumber, amount) {
+    if (!shiftSalesLog[shiftId]) shiftSalesLog[shiftId] = [];
+
+    const existingIndex = shiftSalesLog[shiftId].findIndex(o => o.receipt_number === receiptNumber);
+    if (existingIndex >= 0) {
+        shiftSalesLog[shiftId][existingIndex].total_amount = amount; // لو الفاتورة اتعدلت
+    } else {
+        shiftSalesLog[shiftId].push({ receipt_number: receiptNumber, total_amount: amount });
+    }
+    localStorage.setItem("shiftSalesLog", JSON.stringify(shiftSalesLog));
+}
+
+function getShiftTotal(shiftId) {
+    return (shiftSalesLog[shiftId] || []).reduce((sum, o) => sum + Number(o.total_amount), 0);
+}
+
 
 function updateConnectionStatus() {
     const statusBadge = document.getElementById("connectionStatus");
@@ -294,43 +313,59 @@ function updateConnectionStatus() {
 window.addEventListener('online', updateConnectionStatus);
 window.addEventListener('offline', updateConnectionStatus);
 
+// تعديل دالة المزامنة عشان ميسبش الأوردر لو فشل رفع الأصناف
 async function syncOfflineOrders() {
     if (offlineOrders.length === 0) return;
-    
+    if (window.isSyncing) return;
+    window.isSyncing = true;
+
     let remainingOrders = [];
     for (let order of offlineOrders) {
         try {
             const { items, id, ...orderInfo } = order; 
-            
-            const { data: newOrder, error } = await supabaseClient.from("orders").insert(orderInfo).select().single();
-            if (error) throw error;
-            
-            const orderItems = items.map(e => ({
-                order_id: newOrder.id, product_id: e.product_id, quantity: e.quantity, unit_price: e.unit_price
-            }));
-            const { error: itemsError } = await supabaseClient.from("order_items").insert(orderItems);
-            if (itemsError) throw itemsError;
-            
+
+            const { data: existing } = await supabaseClient.from("orders").select("id").eq("receipt_number", order.receipt_number).maybeSingle();
+
+            let newOrderId;
+            if (existing) {
+                newOrderId = existing.id;
+                // فحص لو الأصناف اترفعت قبل كده ولا سقطت
+                const { data: existingItems } = await supabaseClient.from("order_items").select("id").eq("order_id", newOrderId).limit(1);
+                if (!existingItems || existingItems.length === 0) {
+                    const orderItems = items.map(e => ({ order_id: newOrderId, product_id: e.product_id, quantity: e.quantity, unit_price: e.unit_price }));
+                    const { error: itemsError } = await supabaseClient.from("order_items").insert(orderItems);
+                    if (itemsError) throw itemsError;
+                }
+            } else {
+                const { data: newOrder, error } = await supabaseClient.from("orders").insert(orderInfo).select().single();
+                if (error) throw error;
+                newOrderId = newOrder.id;
+
+                const orderItems = items.map(e => ({ order_id: newOrderId, product_id: e.product_id, quantity: e.quantity, unit_price: e.unit_price }));
+                const { error: itemsError } = await supabaseClient.from("order_items").insert(orderItems);
+                if (itemsError) throw itemsError;
+            }
         } catch (err) {
             console.error("Failed to sync order", order.receipt_number, err);
             remainingOrders.push(order); 
         }
     }
-    
+
     offlineOrders = remainingOrders;
     localStorage.setItem("offlineOrders", JSON.stringify(offlineOrders));
+    window.isSyncing = false;
 }
 
 // === نظام الإنذارات ===
 async function checkOrderAlarms() {
     if (!navigator.onLine) return; 
-    
+
     try {
         const { data: futureOrders } = await supabaseClient.from("orders")
             .select("receipt_number, customer_name, delivery_time")
             .not("delivery_time", "is", null)
             .gte("delivery_time", new Date().toISOString());
-            
+
         if (!futureOrders) return;
 
         const now = new Date().getTime();
@@ -341,12 +376,12 @@ async function checkOrderAlarms() {
 
             if ((hoursLeft <= 8.5 && hoursLeft >= 7.5) || (hoursLeft <= 4.5 && hoursLeft >= 3.5)) {
                 const alarmId = `${order.receipt_number}_${Math.round(hoursLeft)}`;
-                
+
                 if (!activeAlarms.includes(alarmId)) {
                     document.getElementById("alarmMessage").textContent = `أوردر العميل (${order.customer_name || 'بدون اسم'}) موعد تسليمه بعد ${Math.round(hoursLeft)} ساعات! رقم الفاتورة: ${order.receipt_number}`;
                     document.getElementById("alarmBanner").classList.remove("hidden");
                     document.getElementById("alarmBanner").dataset.currentAlarmId = alarmId;
-                    
+
                     let audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
                     audio.play();
                     break; 
@@ -399,9 +434,9 @@ function applyDiscount(source) {
     if (source === 'pct') {
         if (pct > 100) { pct = 100; pctEl.value = "100"; numericBuffers.discountPercent = "100"; }
         if (pct < 0) { pct = 0; pctEl.value = ""; numericBuffers.discountPercent = ""; }
-        
+
         amt = sub * (pct / 100);
-        
+
         if (pctEl.value === "") {
             amtEl.value = ""; numericBuffers.discountAmount = ""; amt = 0;
         } else {
@@ -410,9 +445,9 @@ function applyDiscount(source) {
     } else if (source === 'amt') {
         if (amt > sub) { amt = sub; amtEl.value = sub.toString(); numericBuffers.discountAmount = amtEl.value; }
         if (amt < 0) { amt = 0; amtEl.value = ""; numericBuffers.discountAmount = ""; }
-        
+
         pct = sub > 0 ? (amt / sub) * 100 : 0;
-        
+
         if (amtEl.value === "") {
             pctEl.value = ""; numericBuffers.discountPercent = ""; pct = 0;
         } else {
@@ -648,7 +683,7 @@ function openShiftSalesModal() {
 function closeAdminModal() { document.getElementById('adminPassModal').classList.remove("open"); closeKeyboard(); managerPassString = ""; }
 function closeEndShiftModal() { document.getElementById('endShiftModal').classList.remove('open'); closeKeyboard(); }
 
-// دمج الأونلاين والأوفلاين في الجرد بدقة
+// دالة الجرد المبنية على الجهاز (مضادة لقطعة النت وحساب الفواتير المكررة)
 async function executeShiftSales(isRefresh = false) {
     if (!isRefresh) {
         if (managerPassString !== "2005") {
@@ -660,20 +695,8 @@ async function executeShiftSales(isRefresh = false) {
     
     try {
         const opening = Number(CURRENT_SHIFT.opening_cash);
-        const shiftStartTime = CURRENT_SHIFT.opened_at || CURRENT_SHIFT.created_at;
-        let shiftTotal = 0;
-        
-        if (navigator.onLine) {
-            const { data: orders } = await supabaseClient.from("orders")
-                .select("total_amount")
-                .eq("cashier_id", CURRENT_USER.id)
-                .gte("created_at", shiftStartTime);
-            if (orders) shiftTotal += orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-        }
-
-        const localOrders = offlineOrders.filter(o => o.cashier_id === CURRENT_USER.id && new Date(o.created_at) >= new Date(shiftStartTime));
-        shiftTotal += localOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-
+        // بنحسب المبيعات من السجل المحلي دايماً
+        const shiftTotal = getShiftTotal(CURRENT_SHIFT.id);
         const expected = shiftTotal + opening;
 
         document.getElementById("jardOpening").textContent = opening.toFixed(2) + " ج";
@@ -931,7 +954,7 @@ function resetCartUI() {
 
 document.getElementById("cancelBtn").addEventListener("click", () => { resetCartUI(); closeKeyboard(); });
 
-// حفظ محلي سريع والطباعة في الأوفلاين والأونلاين
+// إضافة البيعة לסجل الشفت المحلي دايماً
 document.getElementById("checkoutBtn").addEventListener("click", async () => {
     const entries = Object.values(cart);
     if(entries.length === 0) return alert("السلة فاضية!");
@@ -984,6 +1007,9 @@ document.getElementById("checkoutBtn").addEventListener("click", async () => {
             return;
         }
     }
+
+    // تسجيل البيعة في السجل بتاع الشفت دايما
+    logShiftSale(CURRENT_SHIFT.id, receiptNum, total);
 
     printReceipt(receiptNum, entries, custName, notes, dAmt);
     resetCartUI(); closeKeyboard();
@@ -1051,33 +1077,29 @@ async function searchOrderForEdit() {
 }
 
 document.getElementById("endShiftBtn").addEventListener("click", () => { 
-    if (!navigator.onLine && offlineOrders.length > 0) return alert("هناك فواتير قيد الحفظ! يرجى الانتظار حتى عودة الإنترنت لتقفيل الوردية بدقة.");
+    // شيلنا قيد الإنترنت من هنا عشان يقدر يقفل الشيفت وهو أوفلاين عادي بناءً على طلبنا
     document.getElementById("endShiftModal").classList.add("open"); 
 });
 
-// دمج المبيعات من السيرفر والأوفلاين في تقفيل الوردية
+// إغلاق الشيفت بالاعتماد على الحساب المحلي فقط!
 document.getElementById("confirmEndShiftBtn").addEventListener("click", async () => {
   const actualCash = document.getElementById("actualCashInput").value;
   if(!actualCash) return alert("أدخل النقدية الفعلية!");
   const btn = document.getElementById("confirmEndShiftBtn"); btn.disabled = true; btn.textContent = "جاري الإغلاق...";
 
-  const shiftStartTime = CURRENT_SHIFT.opened_at || CURRENT_SHIFT.created_at;
-  let shiftTotal = 0;
+  // الجرد بيقرا من السجل الداخلي وميتأثرش بالنت
+  const shiftTotal = getShiftTotal(CURRENT_SHIFT.id);
 
-  if (navigator.onLine) {
-      const { data: orders } = await supabaseClient.from("orders")
-          .select("total_amount")
-          .eq("cashier_id", CURRENT_USER.id)
-          .gte("created_at", shiftStartTime);
-      if (orders) shiftTotal += orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+  try {
+      // محاولة إغلاق الشيفت على السيرفر (لو في نت هيقفل، لو مفيش هيتجاهل ويكمل طباعة)
+      if (navigator.onLine) {
+          await supabaseClient.from("cashier_shifts").update({
+            status: "closed", closed_at: new Date().toISOString(), actual_cash: actualCash, expected_cash: shiftTotal + Number(CURRENT_SHIFT.opening_cash), total_sales: shiftTotal
+          }).eq("id", CURRENT_SHIFT.id);
+      }
+  } catch (e) {
+      console.log("تم الإغلاق محلياً لعدم توفر إنترنت");
   }
-
-  const localOrders = offlineOrders.filter(o => o.cashier_id === CURRENT_USER.id && new Date(o.created_at) >= new Date(shiftStartTime));
-  shiftTotal += localOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-
-  await supabaseClient.from("cashier_shifts").update({
-    status: "closed", closed_at: new Date().toISOString(), actual_cash: actualCash, expected_cash: shiftTotal + Number(CURRENT_SHIFT.opening_cash), total_sales: shiftTotal
-  }).eq("id", CURRENT_SHIFT.id);
 
   printZReport(shiftTotal, actualCash, CURRENT_SHIFT.opening_cash);
 
@@ -1128,8 +1150,9 @@ function printReceipt(num, items, cust, note, disc) {
 }
 
 function printZReport(sales, actual, opening) {
-  const openDateStr = formatDDMMYYYY(CURRENT_SHIFT.opened_at);
-  const openTimeStr = new Date(CURRENT_SHIFT.opened_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const shiftStartTime = CURRENT_SHIFT.opened_at || CURRENT_SHIFT.created_at || new Date().toISOString();
+  const openDateStr = formatDDMMYYYY(shiftStartTime);
+  const openTimeStr = new Date(shiftStartTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
   const closeDateStr = formatDDMMYYYY(new Date());
   const closeTimeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
