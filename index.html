@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>تسجيل الدخول | مخبز العائلة</title>
+<title>نقطة البيع | المخبز</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
@@ -11,184 +11,1161 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/css/index.css">
 <script src="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/index.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --cream: #F6EEDD; --paper: #FFFDF8; --crust: #3D2B1F; --ink: #2B2118; --honey: #C98A3D; --brick: #A8453A; --border: rgba(61,43,31,0.12); }
-  body { font-family: 'Tajawal', sans-serif; background: var(--crust); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; overscroll-behavior: none; }
-  .login-card { background: var(--cream); border-radius: 24px; width: 380px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); overflow: hidden; position: relative; z-index: 10; margin-bottom: 20px; }
-  .form-input { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 15px; font-weight: bold; }
-  .form-input:focus { outline: 2px solid var(--honey); }
+  :root { --cream: #F6EEDD; --paper: #FFFDF8; --crust: #3D2B1F; --crust-2: #2A1D15; --ink: #2B2118; --honey: #C98A3D; --sage: #4C7A4C; --brick: #A8453A; --border: rgba(61,43,31,0.15); }
+  body { font-family: 'Tajawal', sans-serif; background: var(--cream); color: var(--ink); overscroll-behavior: none; }
+  .font-display { font-family: 'Cairo', sans-serif; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: var(--honey); border-radius: 8px; }
   
-  /* ستايل الكيبورد */
-  #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); transition: transform 0.3s ease-in-out; transform: translateY(100%); }
-  #keyboardWrapper.show { transform: translateY(0); }
+  .product-card { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; }
+  .product-card:active { transform: scale(0.92); box-shadow: none; }
+  
+  .form-input { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: bold; }
+  .form-select { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: bold; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; transition: all 0.3s ease; }
+  .modal-overlay.open { display: flex; }
+  .modal-content { background: var(--cream); border-radius: 16px; padding: 20px; width: 400px; max-width: 90%; }
+  
+  #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); transition: transform 0.3s ease-in-out; }
   .simple-keyboard { color: #000; font-weight: bold; }
   
-  /* تشفير الباسورد عشان كروم ميتدخلش نهائيا */
-  .secure-input { -webkit-text-security: disc; font-family: text-security-disc, 'Tajawal', sans-serif; }
+  #printArea { display: none; }
+  @media print {
+    @page { margin: 0; }
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    
+    #printArea { 
+        display: block; position: absolute; top: 0; left: 0; 
+        width: 72mm; 
+        padding: 2mm 5mm 2mm 2mm; 
+        box-sizing: border-box; direction: rtl;
+        background: #fff; color: #000; font-family: 'Tajawal', sans-serif; 
+        font-size: 13px; line-height: 1.3;
+    }
+    
+    .r-logo { max-width: 45px; margin: 0 auto 5px auto; display: block; filter: grayscale(100%) contrast(300%); }
+    .r-title { font-size: 15px; font-weight: 900; text-align: center; margin-bottom: 4px; } 
+    .r-divider { border-top: 1px dashed #000; margin: 4px 0; }
+    .r-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; margin-bottom: 2px; } 
+    
+    table { width: 100%; text-align: right; border-collapse: collapse; margin: 4px 0; table-layout: fixed; }
+    th { border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 3px 1px; font-size: 12px; }
+    td { padding: 4px 1px; font-size: 13px; font-weight: bold; border-bottom: 1px dotted #ccc; }
+    
+    th:nth-child(1), td:nth-child(1) { width: 45%; text-align: right; }
+    th:nth-child(2), td:nth-child(2) { width: 20%; text-align: center; white-space: nowrap; }
+    th:nth-child(3), td:nth-child(3) { width: 15%; text-align: center; }
+    th:nth-child(4), td:nth-child(4) { width: 20%; text-align: left; white-space: nowrap; }
+  }
 </style>
 </head>
-<body>
-<div class="login-card">
-  <div class="px-8 pt-8 pb-6 text-center" style="background: var(--crust); color: var(--cream);">
-    <div class="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center text-xl mb-3" style="background: var(--honey);">🥐</div>
-    <h1 class="font-display font-bold text-xl">مخبز العائلة</h1>
+<body class="h-screen flex flex-col">
+
+<header class="flex items-center justify-between px-4 py-3 shrink-0" style="background: var(--crust); color: var(--cream);">
+  <div class="flex items-center gap-2">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center text-lg" style="background: var(--honey);">🥐</div>
+    <h1 class="font-display font-bold text-lg hidden md:block">نقطة البيع</h1>
+    <span id="connectionStatus" class="text-xs px-2 py-1 rounded bg-green-800 text-green-100 font-bold ml-2 transition-colors">🟢 متصل</span>
   </div>
-  <form id="loginForm" class="px-8 py-7">
-    <label class="block text-xs font-bold mb-2" style="color: var(--ink);">اختر اسم المستخدم</label>
-    <select id="loginEmail" class="form-input mb-4 cursor-pointer">
-      <option value="">جاري تحميل القائمة...</option>
-    </select>
+  <div class="flex gap-1 overflow-x-auto">
+    <button onclick="openShiftSalesModal()" class="bg-teal-600 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-teal-700 transition">
+        👁️ جرد
+    </button>
+    <button onclick="openEditOrderModal()" class="bg-indigo-600 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-indigo-700 transition">
+        🔍 تعديل
+    </button>
+    <button onclick="openDrawer()" class="px-2 py-2 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-700 transition">
+      💵 درج
+    </button>
+    <button id="endShiftBtn" class="px-2 py-2 rounded-lg font-bold text-xs bg-red-600 text-white hover:bg-red-700">🔒 إغلاق</button>
+    <button onclick="quickLogout()" class="bg-gray-500 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-gray-600 transition">
+        🏃 خروج
+    </button>
+    <button id="returnAdminBtn" class="hidden bg-gray-800 text-white px-2 py-2 rounded-lg font-bold text-xs hover:bg-gray-900 transition">
+      الإدارة
+    </button>
+  </div>
+</header>
 
-    <label class="block text-xs font-bold mb-2" style="color: var(--ink);">كلمة المرور</label>
-    <!-- تم تغيير النوع لـ text مع إخفاء بنظام CSS لمنع Autofill -->
-    <input id="loginPassword" type="text" required class="form-input mb-2 secure-input" placeholder="••••" autocomplete="off" spellcheck="false">
-
-    <p id="loginErrorMsg" class="text-xs font-bold mb-2 hidden text-center" style="color: var(--brick);"></p>
-    <button type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-bold text-sm mt-4 transition-colors" style="background: var(--honey); color: #2A1400;">دخول</button>
-  </form>
-</div>
-
-<!-- حاوية الكيبورد -->
-<div id="keyboardWrapper">
-    <div class="flex justify-between mb-2">
-        <span class="text-sm font-bold text-gray-700 px-2">لوحة الأرقام (كلمة المرور)</span>
-        <button type="button" onclick="closeKeyboard()" class="text-red-500 font-bold text-sm bg-white px-3 py-1 rounded">إغلاق ✕</button>
+<!-- شريط الإنذارات -->
+<div id="alarmBanner" class="hidden bg-red-600 text-white px-4 py-3 flex justify-between items-center shadow-lg shrink-0 z-50">
+    <div class="flex items-center gap-3">
+        <span class="text-2xl animate-bounce">⏰</span>
+        <div>
+            <h4 class="font-bold text-lg">تنبيه تسليم أوردر!</h4>
+            <p id="alarmMessage" class="text-sm font-bold"></p>
+        </div>
     </div>
-    <div class="simple-keyboard" dir="ltr"></div>
+    <button onclick="dismissAlarm()" class="bg-white text-red-600 font-bold px-4 py-2 rounded-lg text-sm hover:bg-gray-100">إخفاء الإنذار</button>
 </div>
+
+<div class="flex-1 flex overflow-hidden">
+  
+  <main class="flex-1 flex flex-col p-4 border-l border-gray-300 relative">
+    
+    <div class="relative mb-4 flex gap-2">
+        <div class="relative flex-1">
+            <input type="text" id="productSearch" placeholder="🔍 ابحث عن منتج أو باركود..." class="form-input p-4 text-xl w-full pr-10" autocomplete="off">
+            <button onclick="clearSearchField()" type="button" id="clearSearchBtn" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-red-500 hover:text-red-700 bg-red-100 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg hidden shadow-sm">✕</button>
+        </div>
+    </div>
+
+    <div id="categoryTabs" class="flex gap-2 overflow-x-auto mb-4 pb-2"></div>
+    <div id="productGrid" class="flex-1 overflow-y-auto grid grid-cols-3 md:grid-cols-4 gap-3 content-start"></div>
+    
+    <div id="keyboardWrapper" class="hidden">
+        <div class="flex justify-between mb-2">
+            <span class="text-sm font-bold text-gray-700">لوحة المفاتيح</span>
+            <button onclick="closeKeyboard()" type="button" class="text-red-500 font-bold text-sm bg-white px-2 rounded hover:bg-red-100">إغلاق ✕</button>
+        </div>
+        <div class="simple-keyboard" dir="ltr"></div>
+    </div>
+  </main>
+
+  <div class="w-24 md:w-32 bg-gray-100 border-l border-gray-300 flex flex-col p-2 shrink-0 select-none shadow-inner z-10">
+    <div class="text-center text-xs font-bold text-gray-500 mb-1">الكمية المضافة</div>
+    <div id="multiplierDisplay" class="bg-white border-2 border-blue-400 rounded-lg text-center font-extrabold text-2xl py-2 mb-3 shadow-inner text-blue-600">1</div>
+    
+    <div class="grid grid-cols-2 gap-1 flex-1 content-start">
+      <button onclick="appendMultiplier(7)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">7</button>
+      <button onclick="appendMultiplier(8)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">8</button>
+      <button onclick="appendMultiplier(9)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">9</button>
+      <button onclick="appendMultiplier(4)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">4</button>
+      <button onclick="appendMultiplier(5)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">5</button>
+      <button onclick="appendMultiplier(6)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">6</button>
+      <button onclick="appendMultiplier(1)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">1</button>
+      <button onclick="appendMultiplier(2)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">2</button>
+      <button onclick="appendMultiplier(3)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">3</button>
+      <button onclick="appendMultiplier(0)" class="bg-white rounded-lg py-3 font-bold text-xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition">0</button>
+      <button onclick="appendMultiplier('.')" class="bg-white rounded-lg py-3 font-bold text-3xl shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200 transition text-blue-600 pb-5">.</button>
+      <button onclick="clearMultiplier()" class="bg-red-100 text-red-600 rounded-lg py-3 font-bold text-lg shadow-sm border border-red-200 hover:bg-red-200 active:bg-red-300 transition col-span-2">مسح (C)</button>
+    </div>
+  </div>
+
+  <aside id="rightSidebar" class="w-1/3 flex flex-col h-full overflow-y-auto" style="background: var(--crust-2); color: var(--cream);">
+    <div class="p-4 flex-1 overflow-y-auto min-h-[150px]" id="cartList"></div>
+    
+    <div id="bottomInputsWrapper" class="p-4 shrink-0 transition-all duration-300" style="background: rgba(255,255,255,0.05);">
+      <select id="b2bClientSelect" class="form-select mb-2 bg-transparent text-white border-gray-500 font-bold" onchange="handleClientChange()">
+          <option value="" class="text-black">-- بيع عادي (بدون شركة) --</option>
+      </select>
+
+      <div class="mb-2 p-2 border border-yellow-500 rounded-lg bg-yellow-900 bg-opacity-20">
+          <label class="text-xs font-bold text-yellow-400 mb-1 block">⏰ موعد تسليم الأوردر (للحجوزات)</label>
+          <input type="datetime-local" id="deliveryTime" class="form-input bg-transparent text-white border-gray-500 font-bold w-full">
+      </div>
+
+      <input type="text" id="customerName" placeholder="👤 اسم العميل / المستلم (اختياري)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
+      <input type="text" id="orderNotes" placeholder="📝 ملاحظات (مثال: خصم ضيافة)" class="form-input mb-2 bg-transparent text-white border-gray-600 p-3 text-base" autocomplete="off">
+      
+      <div class="flex gap-2 mb-2">
+        <div class="flex-1">
+          <label class="text-sm font-bold text-gray-400">خصم % إضافي</label>
+          <input type="text" inputmode="decimal" id="discountPercent" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off" placeholder="0.00">
+        </div>
+        <div class="flex-1">
+          <label class="text-sm font-bold text-gray-400">خصم (ج) إضافي</label>
+          <input type="text" inputmode="decimal" id="discountAmount" class="form-input bg-transparent text-white border-gray-600 text-lg" autocomplete="off" placeholder="0.00">
+        </div>
+      </div>
+      
+      <div class="flex justify-between items-center text-lg font-bold text-gray-300 mb-1">
+        <span>الإجمالي الفرعي:</span> <span id="subtotalVal">0.00 ج</span>
+      </div>
+      <div class="flex justify-between items-center font-black text-2xl text-yellow-400 mb-4">
+        <span>المطلوب:</span> <span id="totalVal">0.00 ج</span>
+      </div>
+      
+      <button id="checkoutBtn" class="w-full py-4 rounded-2xl font-black text-xl bg-green-600 text-white hover:bg-green-700 mb-2 transition-colors shadow-lg">تأكيد وطباعة 🖨️</button>
+      <button id="cancelBtn" class="w-full py-3 rounded-2xl font-bold border-2 border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition-colors">إلغاء الطلب</button>
+    </div>
+  </aside>
+</div>
+
+<!-- Modal تعديل الفاتورة -->
+<div id="editOrderModal" class="modal-overlay">
+  <div class="modal-content text-black">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-xl">🔍 بحث عن فاتورة لتعديلها</h3>
+        <button onclick="closeEditOrderModal()" class="text-gray-500 font-bold hover:text-red-500 text-xl">✕</button>
+    </div>
+    <p class="text-sm text-gray-600 mb-4">اكتب رقم الفاتورة (أرقام فقط) لاسترجاعها للسلة والتعديل عليها.</p>
+    <input type="text" inputmode="numeric" id="searchReceiptInput" class="form-input text-center text-lg py-3 mb-4" placeholder="مثال: 172554890..." autocomplete="off">
+    <button id="searchOrderBtn" onclick="searchOrderForEdit()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors">بحث واسترجاع للسلة</button>
+  </div>
+</div>
+
+<div id="adminPassModal" class="modal-overlay">
+  <div class="modal-content text-black">
+    <h3 class="font-bold text-xl mb-4 text-center">🔒 جرد الشيفت السري</h3>
+    <p class="text-sm text-gray-600 mb-4 text-center">أدخل الرقم السري للمدير لمعرفة المبيعات:</p>
+    <div id="managerCodeBox" tabindex="0" class="form-input text-3xl text-center py-3 mb-4 h-14 flex items-center justify-center cursor-pointer bg-white border border-gray-300 rounded-lg select-none outline-none focus:ring-2 focus:ring-teal-500">
+        <span id="fakeDotsDisplay" class="text-gray-400 text-lg">••••</span>
+    </div>
+    <div class="flex gap-2">
+        <button onclick="executeShiftSales()" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors">تأكيد</button>
+        <button onclick="closeAdminModal()" class="flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- مودال الجرد اللحظي الجديد -->
+<div id="realtimeJardModal" class="modal-overlay">
+  <div class="modal-content text-black w-[450px]">
+    <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <h3 class="font-bold text-xl text-teal-700">📊 جرد الوردية اللحظي</h3>
+        <button onclick="document.getElementById('realtimeJardModal').classList.remove('open')" class="text-red-500 font-bold text-xl">✕</button>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-4 text-center">
+        <div class="bg-gray-100 p-3 rounded-lg">
+            <p class="text-xs text-gray-500 font-bold">العهدة الافتتاحية</p>
+            <p id="jardOpening" class="font-black text-xl">0.00 ج</p>
+        </div>
+        <div class="bg-gray-100 p-3 rounded-lg">
+            <p class="text-xs text-gray-500 font-bold">مبيعات الشيفت</p>
+            <p id="jardSales" class="font-black text-xl text-green-600">0.00 ج</p>
+        </div>
+    </div>
+    <div class="bg-teal-50 p-4 rounded-xl text-center border border-teal-200">
+        <p class="text-sm text-teal-800 font-bold">الإجمالي المتوقع بالدرج حالياً</p>
+        <p id="jardExpected" class="font-black text-3xl text-teal-600 mt-1">0.00 ج</p>
+    </div>
+    <button onclick="executeShiftSales(true)" class="w-full mt-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-lg transition-colors">🔄 تحديث البيانات</button>
+  </div>
+</div>
+
+<div id="startShiftModal" class="modal-overlay">
+  <div class="modal-content text-black">
+    <div class="text-3xl text-center mb-2">🔓</div>
+    <h3 class="font-bold text-xl mb-2 text-center">بداية الوردية</h3>
+    <p class="text-sm text-gray-600 mb-4 text-center">أدخل العهدة الافتتاحية لفتح الوردية.</p>
+    <input type="text" inputmode="decimal" id="startShiftCashInput" class="form-input text-2xl text-center py-4 mt-2 mb-4 font-bold" placeholder="0.00" autocomplete="off">
+    <button id="confirmStartShiftBtn" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors">✓ ابدأ الوردية</button>
+  </div>
+</div>
+
+<div id="endShiftModal" class="modal-overlay">
+  <div class="modal-content text-black">
+    <h3 class="font-bold text-xl mb-4 text-center">تقفيل الوردية</h3>
+    <p class="text-sm text-gray-600 mb-4 text-center">أدخل الجرد الفعلي للدرج لإنهاء الوردية وطباعة التقرير.</p>
+    <label class="font-bold text-sm">النقدية الفعلية (الجرد)</label>
+    <input type="text" inputmode="decimal" id="actualCashInput" class="form-input text-xl text-center py-3 mt-2 mb-4" placeholder="0.00" autocomplete="off">
+    <button id="confirmEndShiftBtn" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors">تأكيد الإغلاق وطباعة التقرير</button>
+    <button onclick="closeEndShiftModal()" class="w-full py-2 mt-2 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition-colors">إلغاء</button>
+  </div>
+</div>
+
+<div id="printArea"></div>
 
 <script>
-const supabaseClient = supabase.createClient("https://rjhsjekwixavydzkghqt.supabase.co", "sb_publishable_lHjuLBBq_tr59ziXYvFSag_UMPkGMkj");
+const SUPABASE_URL = "https://rjhsjekwixavydzkghqt.supabase.co";
+const SUPABASE_KEY = "sb_publishable_lHjuLBBq_tr59ziXYvFSag_UMPkGMkj";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let CURRENT_USER = null; let CURRENT_BRANCH = null; let CURRENT_SHIFT = null; let CURRENT_CASHIER_NAME = "";
+let products = []; let cart = {};
+let subtotal = 0; let total = 0;
 
-// سحب أسماء الموظفين من الداتابيز
-async function loadStaffList() {
-  const { data, error } = await supabaseClient.from("staff").select("email, full_name, role");
-  const select = document.getElementById("loginEmail");
-  
-  if (data && data.length > 0) {
-    select.innerHTML = '<option value="">-- اضغط لاختيار اسمك --</option>' + data.map(s => `<option value="${s.email}">${s.full_name} (${s.role === 'admin' ? 'مدير' : 'كاشير'})</option>`).join("");
-  } else {
-    select.innerHTML = `<option value="">لا يوجد موظفين مسجلين حالياً</option>`;
-  }
+let EDITING_ORDER_ID = null;
+let EDITING_RECEIPT_NUM = null;
+
+let branchSettings = { bakery_name: "مخبز العائلة", logo_url: "", welcome_message: "شكراً لزيارتكم" };
+
+// === متغيرات الأوفلاين والجرد اللحظي الثابت ===
+let b2bClients = [];
+let activeClientPrices = {};
+let offlineOrders = JSON.parse(localStorage.getItem("offlineOrders") || "[]");
+let activeAlarms = JSON.parse(localStorage.getItem('dismissedAlarms') || "[]");
+
+// السجل المحلي للمبيعات (الحل السحري عشان الجرد ميضربش لو النت فصل وقت التقفيل)
+let shiftSalesLog = JSON.parse(localStorage.getItem("shiftSalesLog") || "{}");
+
+function logShiftSale(shiftId, receiptNumber, amount) {
+    if (!shiftSalesLog[shiftId]) shiftSalesLog[shiftId] = [];
+    
+    const existingIndex = shiftSalesLog[shiftId].findIndex(o => o.receipt_number === receiptNumber);
+    if (existingIndex >= 0) {
+        shiftSalesLog[shiftId][existingIndex].total_amount = amount; // لو الفاتورة اتعدلت
+    } else {
+        shiftSalesLog[shiftId].push({ receipt_number: receiptNumber, total_amount: amount });
+    }
+    localStorage.setItem("shiftSalesLog", JSON.stringify(shiftSalesLog));
 }
-loadStaffList();
 
-// === إعدادات الكيبورد التاتش (بالطريقة الصح اللي إنت استنتجتها) ===
+function getShiftTotal(shiftId) {
+    return (shiftSalesLog[shiftId] || []).reduce((sum, o) => sum + Number(o.total_amount), 0);
+}
+
+
+function updateConnectionStatus() {
+    const statusBadge = document.getElementById("connectionStatus");
+    if (navigator.onLine) {
+        statusBadge.innerHTML = "🟢 متصل";
+        statusBadge.className = "text-xs px-2 py-1 rounded bg-green-800 text-green-100 font-bold ml-2 transition-colors";
+        syncOfflineOrders();
+    } else {
+        statusBadge.innerHTML = "🔴 أوفلاين (يتم الحفظ)";
+        statusBadge.className = "text-xs px-2 py-1 rounded bg-red-800 text-red-100 font-bold ml-2 transition-colors";
+    }
+}
+window.addEventListener('online', updateConnectionStatus);
+window.addEventListener('offline', updateConnectionStatus);
+
+// تعديل دالة المزامنة عشان ميسبش الأوردر لو فشل رفع الأصناف
+async function syncOfflineOrders() {
+    if (offlineOrders.length === 0) return;
+    if (window.isSyncing) return;
+    window.isSyncing = true;
+    
+    let remainingOrders = [];
+    for (let order of offlineOrders) {
+        try {
+            const { items, id, ...orderInfo } = order; 
+            
+            const { data: existing } = await supabaseClient.from("orders").select("id").eq("receipt_number", order.receipt_number).maybeSingle();
+                
+            let newOrderId;
+            if (existing) {
+                newOrderId = existing.id;
+                // فحص لو الأصناف اترفعت قبل كده ولا سقطت
+                const { data: existingItems } = await supabaseClient.from("order_items").select("id").eq("order_id", newOrderId).limit(1);
+                if (!existingItems || existingItems.length === 0) {
+                    const orderItems = items.map(e => ({ order_id: newOrderId, product_id: e.product_id, quantity: e.quantity, unit_price: e.unit_price }));
+                    const { error: itemsError } = await supabaseClient.from("order_items").insert(orderItems);
+                    if (itemsError) throw itemsError;
+                }
+            } else {
+                const { data: newOrder, error } = await supabaseClient.from("orders").insert(orderInfo).select().single();
+                if (error) throw error;
+                newOrderId = newOrder.id;
+                
+                const orderItems = items.map(e => ({ order_id: newOrderId, product_id: e.product_id, quantity: e.quantity, unit_price: e.unit_price }));
+                const { error: itemsError } = await supabaseClient.from("order_items").insert(orderItems);
+                if (itemsError) throw itemsError;
+            }
+        } catch (err) {
+            console.error("Failed to sync order", order.receipt_number, err);
+            remainingOrders.push(order); 
+        }
+    }
+    
+    offlineOrders = remainingOrders;
+    localStorage.setItem("offlineOrders", JSON.stringify(offlineOrders));
+    window.isSyncing = false;
+}
+
+// === نظام الإنذارات ===
+async function checkOrderAlarms() {
+    if (!navigator.onLine) return; 
+    
+    try {
+        const { data: futureOrders } = await supabaseClient.from("orders")
+            .select("receipt_number, customer_name, delivery_time")
+            .not("delivery_time", "is", null)
+            .gte("delivery_time", new Date().toISOString());
+            
+        if (!futureOrders) return;
+
+        const now = new Date().getTime();
+
+        for (let order of futureOrders) {
+            const deliveryTime = new Date(order.delivery_time).getTime();
+            const hoursLeft = (deliveryTime - now) / (1000 * 60 * 60);
+
+            if ((hoursLeft <= 8.5 && hoursLeft >= 7.5) || (hoursLeft <= 4.5 && hoursLeft >= 3.5)) {
+                const alarmId = `${order.receipt_number}_${Math.round(hoursLeft)}`;
+                
+                if (!activeAlarms.includes(alarmId)) {
+                    document.getElementById("alarmMessage").textContent = `أوردر العميل (${order.customer_name || 'بدون اسم'}) موعد تسليمه بعد ${Math.round(hoursLeft)} ساعات! رقم الفاتورة: ${order.receipt_number}`;
+                    document.getElementById("alarmBanner").classList.remove("hidden");
+                    document.getElementById("alarmBanner").dataset.currentAlarmId = alarmId;
+                    
+                    let audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                    audio.play();
+                    break; 
+                }
+            }
+        }
+    } catch (e) { console.error("Alarm check failed", e); }
+}
+
+function dismissAlarm() {
+    const alarmId = document.getElementById("alarmBanner").dataset.currentAlarmId;
+    if (alarmId) {
+        activeAlarms.push(alarmId);
+        localStorage.setItem('dismissedAlarms', JSON.stringify(activeAlarms));
+    }
+    document.getElementById("alarmBanner").classList.add("hidden");
+}
+
+setInterval(checkOrderAlarms, 60000);
+setTimeout(checkOrderAlarms, 3000); 
+
+let currentMultiplierStr = "";
+
+function appendMultiplier(num) {
+  if (currentMultiplierStr.length > 5) return; 
+  if (num === '.' && currentMultiplierStr.includes('.')) return; 
+  if (num === '.' && currentMultiplierStr === "") currentMultiplierStr = "0";
+  currentMultiplierStr += num.toString();
+  document.getElementById('multiplierDisplay').textContent = currentMultiplierStr;
+}
+
+function clearMultiplier() {
+  currentMultiplierStr = "";
+  document.getElementById('multiplierDisplay').textContent = "1";
+}
+
+function getMultiplier() {
+  let val = parseFloat(currentMultiplierStr);
+  return (isNaN(val) || val <= 0) ? 1 : val; 
+}
+
+function applyDiscount(source) {
+    const pctEl = document.getElementById("discountPercent");
+    const amtEl = document.getElementById("discountAmount");
+    let sub = subtotal || 0;
+
+    let pct = parseFloat(pctEl.value) || 0;
+    let amt = parseFloat(amtEl.value) || 0;
+
+    if (source === 'pct') {
+        if (pct > 100) { pct = 100; pctEl.value = "100"; numericBuffers.discountPercent = "100"; }
+        if (pct < 0) { pct = 0; pctEl.value = ""; numericBuffers.discountPercent = ""; }
+        
+        amt = sub * (pct / 100);
+        
+        if (pctEl.value === "") {
+            amtEl.value = ""; numericBuffers.discountAmount = ""; amt = 0;
+        } else {
+            amtEl.value = amt.toFixed(2); numericBuffers.discountAmount = amtEl.value;
+        }
+    } else if (source === 'amt') {
+        if (amt > sub) { amt = sub; amtEl.value = sub.toString(); numericBuffers.discountAmount = amtEl.value; }
+        if (amt < 0) { amt = 0; amtEl.value = ""; numericBuffers.discountAmount = ""; }
+        
+        pct = sub > 0 ? (amt / sub) * 100 : 0;
+        
+        if (amtEl.value === "") {
+            pctEl.value = ""; numericBuffers.discountPercent = ""; pct = 0;
+        } else {
+            pctEl.value = pct.toFixed(2); numericBuffers.discountPercent = pctEl.value;
+        }
+    }
+
+    total = sub - amt;
+    document.getElementById("subtotalVal").textContent = sub.toFixed(2) + " ج";
+    document.getElementById("totalVal").textContent = total.toFixed(2) + " ج";
+}
+
 let keyboard;
-const passwordInput = document.getElementById("loginPassword");
-const kbWrapper = document.getElementById("keyboardWrapper");
-let passString = ""; // المصدر الوحيد للباسورد
+let selectedInputName = "productSearch"; 
+
+const numericFieldIds = ['discountPercent', 'discountAmount', 'startShiftCashInput', 'actualCashInput', 'searchReceiptInput'];
+let numericBuffers = { discountPercent: "", discountAmount: "", startShiftCashInput: "", actualCashInput: "", searchReceiptInput: "" };
+let textBuffers = {};
+
+function applyBufferToField(fieldId) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    el.value = numericBuffers[fieldId];
+    if (fieldId === 'discountPercent') applyDiscount('pct');
+    else if (fieldId === 'discountAmount') applyDiscount('amt');
+}
+
+function applyTextBufferToField(fieldId) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    el.value = textBuffers[fieldId] || "";
+    if (fieldId === 'productSearch') {
+        renderProducts();
+    } else {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+}
+
+document.getElementById("discountPercent").addEventListener("input", (e) => {
+    numericBuffers.discountPercent = e.target.value; applyDiscount('pct');
+});
+document.getElementById("discountAmount").addEventListener("input", (e) => {
+    numericBuffers.discountAmount = e.target.value; applyDiscount('amt');
+});
+document.getElementById("startShiftCashInput").addEventListener("input", (e) => {
+    numericBuffers.startShiftCashInput = e.target.value;
+});
+document.getElementById("actualCashInput").addEventListener("input", (e) => {
+    numericBuffers.actualCashInput = e.target.value;
+});
+document.getElementById("searchReceiptInput").addEventListener("input", (e) => {
+    numericBuffers.searchReceiptInput = e.target.value;
+});
+
+const layoutArabic = {
+  default: [
+    "ذ 1 2 3 4 5 6 7 8 9 0 - {bksp}",
+    "ض ص ث ق ف غ ع ه خ ح ج د",
+    "ش س ي ب ل ا ت ن م ك ط {enter}",
+    "ئ ء ؤ ر لا ى ة و ز ظ .",
+    "{space}"
+  ]
+};
+
+const layoutNumpad = { default: ["1 2 3", "4 5 6", "7 8 9", ". 0 {bksp}", "{enter}"] };
 
 function initKeyboard() {
   keyboard = new window.SimpleKeyboard.default({
     onChange: input => onChange(input),
     onKeyPress: button => onKeyPress(button),
-    layout: {
-      default: ["1 2 3", "4 5 6", "7 8 9", "{bksp} 0 {enter}"]
-    },
-    display: {
-        '{bksp}': 'مسح ⌫',
-        '{enter}': 'تأكيد ↵'
-    }
+    layout: layoutArabic,
+    display: { '{bksp}': 'مسح ⌫', '{enter}': 'تأكيد ↵', '{space}': 'مسافة' },
+    rtl: true
   });
 }
 
-// قفلنا الـ onChange خالص عشان نتجنب الـ Buffer الداخلي للمكتبة
-function onChange(input) {
-    return;
+function setKeyboardLayout(inputId) {
+    if(!keyboard) return;
+    if (numericFieldIds.includes(inputId)) keyboard.setOptions({ layout: layoutNumpad });
+    else keyboard.setOptions({ layout: layoutArabic });
 }
 
-// الاعتماد بالكامل على ضغطات الزراير
-function onKeyPress(button) {
-  if (button === '{bksp}') {
-      passString = passString.slice(0, -1);
-  } else if (button === '{enter}') {
-      closeKeyboard();
-      document.getElementById("submitBtn").click(); // تفعيل زرار الدخول
-      return;
-  } else if (/^[0-9]$/.test(button)) {
-      passString += button;
-  }
-  passwordInput.value = passString;
+function showKeyboardWithScroll(element) {
+    document.getElementById("keyboardWrapper").classList.remove("hidden");
+    const modal = element.closest('.modal-overlay');
+    if (modal) {
+        modal.style.alignItems = 'flex-start'; modal.style.paddingTop = '30px'; 
+    } else {
+        document.getElementById("bottomInputsWrapper").style.paddingBottom = "280px";
+        setTimeout(() => { element.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
+    }
 }
 
 function closeKeyboard() {
-    kbWrapper.classList.remove("show");
+    document.getElementById("keyboardWrapper").classList.add("hidden");
+    document.getElementById("bottomInputsWrapper").style.paddingBottom = "0px";
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+        m.style.alignItems = 'center'; m.style.paddingTop = '0px';
+    });
+    if (document.activeElement && document.activeElement.classList.contains('form-input')) {
+        document.activeElement.blur();
+    }
 }
 
-passwordInput.addEventListener("focus", () => {
-    kbWrapper.classList.add("show");
-    if(!keyboard) initKeyboard();
-});
+let managerPassString = "";
+function updateFakeDots(val) {
+    const display = document.getElementById("fakeDotsDisplay");
+    if (val && val.length > 0) {
+        display.textContent = '•'.repeat(val.length); display.className = "text-gray-900 text-3xl tracking-[0.3em]"; 
+    } else {
+        display.textContent = '••••'; display.className = "text-gray-400 text-lg tracking-normal"; 
+    }
+}
 
-// اللاب توب بيكتب هنا مباشرة وبيحدث نفس المتغير بدون تضارب
-passwordInput.addEventListener("keydown", (e) => {
+const managerBox = document.getElementById("managerCodeBox");
+managerBox.addEventListener("click", () => managerBox.focus());
+managerBox.addEventListener("focus", () => {
+    selectedInputName = 'managerCodeBox';
+    if(!keyboard) initKeyboard();
+    keyboard.setOptions({ layout: layoutNumpad });
+    showKeyboardWithScroll(managerBox);
+});
+managerBox.addEventListener("keydown", (e) => {
     if (e.key >= '0' && e.key <= '9') {
-        e.preventDefault();
-        passString += e.key;
-        passwordInput.value = passString;
+        e.preventDefault(); managerPassString += e.key; updateFakeDots(managerPassString);
     } else if (e.key === 'Backspace') {
-        e.preventDefault();
-        passString = passString.slice(0, -1);
-        passwordInput.value = passString;
+        e.preventDefault(); managerPassString = managerPassString.slice(0, -1); updateFakeDots(managerPassString);
     } else if (e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById("submitBtn").click();
-    } else if (e.key !== 'Tab') {
-        e.preventDefault(); // منع أي حروف تانية
+        e.preventDefault(); executeShiftSales();
     }
 });
-// ==============================
 
-// تسجيل الدخول الذكي
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const email = document.getElementById("loginEmail").value;
-  // بناخد الباسورد من المتغير اللي إحنا متحكمين فيه 100% مش من المربع
-  const rawPassword = passString; 
+document.querySelectorAll('.form-input').forEach(input => {
+  if (input.id === 'managerCodeBox' || input.id === 'deliveryTime') return; 
+
+  input.addEventListener("focus", (e) => {
+    selectedInputName = e.target.id;
+    if(!keyboard) initKeyboard();
+    setKeyboardLayout(selectedInputName);
+
+    if (numericFieldIds.includes(selectedInputName)) {
+        numericBuffers[selectedInputName] = e.target.value || "";
+    } else {
+        textBuffers[selectedInputName] = e.target.value || "";
+    }
+
+    showKeyboardWithScroll(e.target);
+  });
+
+  input.addEventListener("input", (e) => {
+      if (numericFieldIds.includes(e.target.id)) {
+          numericBuffers[e.target.id] = e.target.value;
+      } else {
+          textBuffers[e.target.id] = e.target.value;
+          if (e.target.id === 'productSearch') {
+              renderProducts();
+          }
+      }
+  });
+});
+
+function onChange(input) { return; }
+
+function onKeyPress(button) {
+  if (selectedInputName === 'managerCodeBox') {
+      if (button === '{bksp}') managerPassString = managerPassString.slice(0, -1);
+      else if (button === '{enter}') { executeShiftSales(); return; }
+      else if (/^[0-9]$/.test(button)) managerPassString += button;
+      updateFakeDots(managerPassString);
+      return;
+  }
+
+  if (numericFieldIds.includes(selectedInputName)) {
+      let buf = numericBuffers[selectedInputName] || "";
+      if (button === '{bksp}') buf = buf.slice(0, -1);
+      else if (button === '.') { if (!buf.includes('.')) buf += '.'; }
+      else if (/^[0-9]$/.test(button)) buf += button;
+      else if (button === '{enter}') {
+          numericBuffers[selectedInputName] = buf;
+          applyBufferToField(selectedInputName);
+          if (selectedInputName === 'startShiftCashInput') document.getElementById("confirmStartShiftBtn").click();
+          else if (selectedInputName === 'actualCashInput') document.getElementById("confirmEndShiftBtn").click();
+          else if (selectedInputName === 'searchReceiptInput') searchOrderForEdit();
+          closeKeyboard();
+          return;
+      }
+      numericBuffers[selectedInputName] = buf;
+      applyBufferToField(selectedInputName);
+      return;
+  }
+
+  let buf = textBuffers[selectedInputName] || "";
+
+  if (button === '{bksp}') {
+      buf = buf.slice(0, -1);
+  } else if (button === '{space}') {
+      buf += ' ';
+  } else if (button === '{enter}') {
+      textBuffers[selectedInputName] = buf;
+      applyTextBufferToField(selectedInputName);
+      if (selectedInputName === 'productSearch') {
+          const el = document.getElementById('productSearch');
+          el.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
+      }
+      closeKeyboard();
+      return;
+  } else if (!button.startsWith('{')) {
+      buf += button;
+  }
+
+  textBuffers[selectedInputName] = buf;
+  applyTextBufferToField(selectedInputName);
+}
+
+function clearSearchField() {
+    const searchInput = document.getElementById("productSearch");
+    searchInput.value = "";
+    textBuffers.productSearch = "";
+    renderProducts();
+    searchInput.focus(); 
+}
+
+function openShiftSalesModal() {
+    document.getElementById('adminPassModal').classList.add("open");
+    managerPassString = ""; updateFakeDots("");
+    selectedInputName = 'managerCodeBox';
+    if(!keyboard) initKeyboard();
+    keyboard.setOptions({ layout: layoutNumpad });
+    showKeyboardWithScroll(document.getElementById('managerCodeBox'));
+    document.getElementById('managerCodeBox').focus();
+}
+
+function closeAdminModal() { document.getElementById('adminPassModal').classList.remove("open"); closeKeyboard(); managerPassString = ""; }
+function closeEndShiftModal() { document.getElementById('endShiftModal').classList.remove('open'); closeKeyboard(); }
+
+// دالة الجرد المبنية على الجهاز (مضادة لقطعة النت وحساب الفواتير المكررة)
+async function executeShiftSales(isRefresh = false) {
+    if (!isRefresh) {
+        if (managerPassString !== "2005") {
+            if(managerPassString) alert("كلمة المرور غير صحيحة! ممنوع الوصول.");
+            managerPassString = ""; updateFakeDots(""); return;
+        }
+        closeAdminModal();
+    }
+    
+    try {
+        const opening = Number(CURRENT_SHIFT.opening_cash);
+        // بنحسب المبيعات من السجل المحلي دايماً
+        const shiftTotal = getShiftTotal(CURRENT_SHIFT.id);
+        const expected = shiftTotal + opening;
+
+        document.getElementById("jardOpening").textContent = opening.toFixed(2) + " ج";
+        document.getElementById("jardSales").textContent = shiftTotal.toFixed(2) + " ج";
+        document.getElementById("jardExpected").textContent = expected.toFixed(2) + " ج";
+        
+        document.getElementById("realtimeJardModal").classList.add("open");
+    } catch (err) { alert("حدث خطأ في جلب البيانات."); }
+}
+
+async function quickLogout() {
+    if(confirm("هل أنت متأكد أن الخروج السريع لن يغلق الوردية وسيتم حفظ المبيعات؟")) {
+        await supabaseClient.auth.signOut();
+        window.open('', '_self', ''); window.close();
+        setTimeout(() => { window.location.href = "index.html"; }, 500);
+    }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div'); div.textContent = str; return div.innerHTML;
+}
+
+function openDrawer() {
+  document.getElementById("printArea").innerHTML = ""; window.print();
+}
+
+async function init() {
+  updateConnectionStatus(); 
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if(!session) { window.location.href = "index.html"; return; }
+  CURRENT_USER = session.user;
   
-  if(!email) { alert("من فضلك اختر اسم المستخدم من القائمة!"); return; }
-  if(!rawPassword) { alert("من فضلك اكتب كلمة المرور!"); return; }
+  const { data: staff } = await supabaseClient.from("staff").select("branch_id, full_name, role").eq("id", CURRENT_USER.id).single();
+  CURRENT_BRANCH = staff.branch_id;
+  CURRENT_CASHIER_NAME = staff.full_name || "كاشير";
 
-  const errorMsg = document.getElementById("loginErrorMsg");
-  errorMsg.classList.add("hidden");
+  if (staff.role === 'admin') document.getElementById('returnAdminBtn').classList.remove('hidden');
+  document.getElementById('returnAdminBtn').onclick = () => window.location.href = 'admin_4.html';
+
+  const { data: settings } = await supabaseClient.from("branch_settings").select("*").eq("branch_id", CURRENT_BRANCH).maybeSingle();
+  if (settings) {
+      branchSettings.bakery_name = settings.bakery_name || "مخبز العائلة";
+      branchSettings.logo_url = settings.logo_url || "";
+      branchSettings.welcome_message = settings.welcome_message || "شكراً لزيارتكم";
+  }
+
+  const { data: shift } = await supabaseClient.from("cashier_shifts").select("*").eq("staff_id", CURRENT_USER.id).eq("status", "open").maybeSingle();
+  if(!shift) { document.getElementById("startShiftModal").classList.add("open"); return; }
   
-  const btn = document.getElementById("submitBtn");
-  btn.disabled = true; btn.textContent = "جاري الدخول...";
+  CURRENT_SHIFT = shift;
+  
+  await loadB2BClients();
+  await loadProducts();
+}
 
-  let { data, error } = await supabaseClient.auth.signInWithPassword({ 
-    email, 
-    password: rawPassword + "-bakery" 
+document.getElementById("confirmStartShiftBtn").addEventListener("click", async () => {
+  if (!navigator.onLine) return alert("لا يمكنك فتح وردية جديدة بدون إنترنت!");
+
+  const btn = document.getElementById("confirmStartShiftBtn");
+  const openingCash = document.getElementById("startShiftCashInput").value;
+  if(openingCash === "" || isNaN(openingCash) || Number(openingCash) < 0) return alert("برجاء إدخال العهدة الافتتاحية بشكل صحيح!"); 
+
+  btn.disabled = true; btn.textContent = "جاري فتح الوردية...";
+
+  const { data, error } = await supabaseClient.from("cashier_shifts").insert({
+    branch_id: CURRENT_BRANCH, staff_id: CURRENT_USER.id, opening_cash: parseFloat(openingCash), status: "open"
+  }).select().single();
+
+  if(error) { alert("حدث خطأ في فتح الوردية!"); btn.disabled = false; btn.textContent = "✓ ابدأ الوردية"; return; }
+
+  CURRENT_SHIFT = data;
+  document.getElementById("startShiftModal").classList.remove("open"); closeKeyboard();
+  await loadB2BClients();
+  await loadProducts();
+});
+
+async function loadB2BClients() {
+    const { data } = await supabaseClient.from("clients").select("*").eq("branch_id", CURRENT_BRANCH);
+    b2bClients = data || [];
+    const select = document.getElementById("b2bClientSelect");
+    select.innerHTML = '<option value="" class="text-black">-- بيع عادي (بدون شركة) --</option>' + 
+        b2bClients.map(c => `<option value="${c.id}" class="text-black">${escapeHtml(c.name)}</option>`).join("");
+}
+
+async function handleClientChange() {
+    const clientId = document.getElementById("b2bClientSelect").value;
+    activeClientPrices = {};
+
+    if (clientId) {
+        const { data } = await supabaseClient.from("client_prices").select("product_id, custom_price").eq("client_id", clientId);
+        if (data) {
+            data.forEach(item => {
+                activeClientPrices[item.product_id] = item.custom_price;
+            });
+        }
+    }
+    
+    renderProducts();
+
+    for (let id in cart) {
+        let p = products.find(x => x.id === id);
+        if (p) {
+            let currentPrice = activeClientPrices[p.id] !== undefined ? activeClientPrices[p.id] : p.base_price;
+            cart[id].base_price = currentPrice;
+        }
+    }
+    updateCart();
+}
+
+async function loadProducts() {
+  const { data } = await supabaseClient.from("products").select("*").eq("is_active", true);
+  products = data || [];
+  renderProducts();
+}
+
+function renderProducts() {
+  const searchInput = document.getElementById("productSearch");
+  const search = searchInput.value.toLowerCase().trim();
+  
+  const clearBtn = document.getElementById("clearSearchBtn");
+  if (clearBtn) {
+      if (search.length > 0) clearBtn.classList.remove("hidden");
+      else clearBtn.classList.add("hidden");
+  }
+
+  const grid = document.getElementById("productGrid");
+  
+  const filtered = products.filter(p => {
+      if (!search) return true;
+      const nameMatch = p.name && p.name.toLowerCase().includes(search);
+      const barcodeMatch = p.barcode && p.barcode.includes(search);
+      return nameMatch || barcodeMatch;
   });
   
-  if (error) {
-    const fallback = await supabaseClient.auth.signInWithPassword({ 
-      email, 
-      password: rawPassword 
-    });
-    data = fallback.data;
-    error = fallback.error;
-  }
-  
-  if (error) {
-    errorMsg.textContent = "كلمة المرور غير صحيحة!";
-    errorMsg.classList.remove("hidden");
-    btn.disabled = false; btn.textContent = "دخول";
+  const cardColors = ['bg-blue-100 border-blue-400', 'bg-green-100 border-green-400', 'bg-yellow-100 border-yellow-400', 'bg-pink-100 border-pink-400', 'bg-purple-100 border-purple-400', 'bg-orange-100 border-orange-400'];
+
+  grid.innerHTML = filtered.map((p, index) => {
+    const colorScheme = cardColors[index % cardColors.length];
     
-    // تصفير الباسورد عشان يكتب من جديد
-    passString = "";
-    passwordInput.value = "";
-    return;
-  }
-  
-  const { data: staff } = await supabaseClient.from("staff").select("role").eq("id", data.user.id).single();
-  if (staff && staff.role === "cashier") {
-    window.location.href = "pos_1.html";
-  } else {
-    window.location.href = "admin_4.html";
+    let displayPrice = activeClientPrices[p.id] !== undefined ? activeClientPrices[p.id] : p.base_price;
+    let isDiscounted = activeClientPrices[p.id] !== undefined && activeClientPrices[p.id] < p.base_price;
+    
+    let priceHtml = isDiscounted 
+        ? `<span class="line-through text-red-500 text-xs ml-1">${Number(p.base_price).toFixed(2)}</span> <span class="text-green-700">${Number(displayPrice).toFixed(2)} ج</span>`
+        : `${Number(displayPrice).toFixed(2)} ج`;
+
+    return `
+    <div onclick="addToCart('${p.id}')" class="product-card ${colorScheme} border-2 p-2 rounded-xl text-center flex flex-col justify-between items-center shadow-md h-28 relative overflow-hidden">
+      ${isDiscounted ? '<span class="absolute top-0 right-0 text-[10px] bg-red-500 text-white px-1 rounded-bl">سعر شركة</span>' : ''}
+      <div class="font-extrabold text-base text-gray-900 mb-1 leading-tight line-clamp-2 px-1 mt-1">${escapeHtml(p.name)}</div>
+      <div class="text-gray-900 font-extrabold text-base bg-white bg-opacity-80 rounded-lg py-1 px-3 shadow-sm w-full mt-auto" dir="ltr">${priceHtml}</div>
+    </div>
+  `}).join("");
+}
+
+document.getElementById("productSearch").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault(); 
+    const scanVal = e.target.value.trim();
+    if (!scanVal) return;
+
+    if (scanVal.length === 13 && scanVal.startsWith("23")) {
+      const itemCode = scanVal.substring(2, 7); 
+      const weightInGrams = scanVal.substring(7, 12); 
+      const weightInKg = Number(weightInGrams) / 1000; 
+
+      const p = products.find(x => x.barcode === itemCode);
+      if (p) {
+        let currentPrice = activeClientPrices[p.id] !== undefined ? activeClientPrices[p.id] : p.base_price;
+        if(cart[p.id]) cart[p.id].qty += weightInKg; 
+        else cart[p.id] = { ...p, qty: weightInKg, base_price: currentPrice };
+        
+        updateCart(); clearSearchField(); clearMultiplier(); return;
+      }
+    }
+
+    const isBarcode = /^[0-9]+$/.test(scanVal);
+    
+    if (isBarcode) {
+        const normalProduct = products.find(x => x.barcode === scanVal);
+        if (normalProduct) { 
+            addToCart(normalProduct.id); clearSearchField(); 
+        } else { 
+            alert("الباركود ده مش متسجل في السيستم!"); clearSearchField(); 
+        }
+    } else {
+        const filtered = products.filter(p => p.name && p.name.toLowerCase().includes(scanVal.toLowerCase()));
+        if (filtered.length === 1) {
+            addToCart(filtered[0].id); clearSearchField();
+        } else if (filtered.length === 0) {
+            alert("مفيش منتج بالاسم ده!");
+        } else {
+            closeKeyboard();
+        }
+    }
   }
 });
+
+function addToCart(id) {
+  const p = products.find(x => x.id === id);
+  const qtyToAdd = getMultiplier();
+  let currentPrice = activeClientPrices[id] !== undefined ? activeClientPrices[id] : p.base_price;
+  
+  if(cart[id]) {
+      cart[id].qty += qtyToAdd; 
+  } else {
+      cart[id] = { ...p, qty: qtyToAdd, base_price: currentPrice };
+  }
+  
+  updateCart(); clearMultiplier();
+}
+
+function updateCart() {
+  const list = document.getElementById("cartList");
+  const entries = Object.values(cart);
+  
+  list.innerHTML = entries.map(e => `
+    <div class="flex justify-between items-center mb-3 bg-white bg-opacity-10 p-3 rounded-lg text-base font-bold">
+      <div class="w-1/2 leading-tight">${escapeHtml(e.name)}</div>
+      <div class="flex gap-2 items-center">
+        <button onclick="cart['${e.id}'].qty--; if(cart['${e.id}'].qty<=0) delete cart['${e.id}']; updateCart();" class="w-8 h-8 flex justify-center items-center bg-red-500 rounded text-white text-xl">-</button>
+        <span class="text-lg">${e.qty}</span>
+        <button onclick="cart['${e.id}'].qty++; updateCart();" class="w-8 h-8 flex justify-center items-center bg-green-500 rounded text-white text-xl">+</button>
+      </div>
+      <div class="text-lg text-yellow-300">${(e.base_price * e.qty).toFixed(2)}</div>
+    </div>
+  `).join("");
+
+  subtotal = entries.reduce((sum, e) => sum + (e.base_price * e.qty), 0);
+  applyDiscount('pct');
+}
+
+function resetCartUI() {
+  cart = {}; 
+  document.getElementById("customerName").value = ""; 
+  document.getElementById("orderNotes").value = "";
+  document.getElementById("deliveryTime").value = "";
+  document.getElementById("discountPercent").value = ""; 
+  document.getElementById("discountAmount").value = ""; 
+  
+  document.getElementById("b2bClientSelect").value = "";
+  handleClientChange();
+
+  numericBuffers.discountPercent = ""; numericBuffers.discountAmount = "";
+  numericBuffers.searchReceiptInput = ""; textBuffers.customerName = ""; textBuffers.orderNotes = "";
+  updateCart(); clearMultiplier();
+  EDITING_ORDER_ID = null; EDITING_RECEIPT_NUM = null;
+  clearSearchField(); 
+  
+  const btn = document.getElementById("checkoutBtn");
+  btn.disabled = false; btn.innerHTML = "تأكيد وطباعة 🖨️";
+  btn.className = "w-full py-4 rounded-2xl font-black text-xl bg-green-600 text-white hover:bg-green-700 mb-2 transition-colors shadow-lg";
+}
+
+document.getElementById("cancelBtn").addEventListener("click", () => { resetCartUI(); closeKeyboard(); });
+
+// إضافة البيعة לסجل الشفت المحلي دايماً
+document.getElementById("checkoutBtn").addEventListener("click", async () => {
+    const entries = Object.values(cart);
+    if(entries.length === 0) return alert("السلة فاضية!");
+    
+    const btn = document.getElementById("checkoutBtn");
+    btn.disabled = true; btn.innerHTML = "جاري الحفظ... ⏳";
+    btn.className = "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-gray-500";
+
+    const selectEl = document.getElementById("b2bClientSelect");
+    let selectedClientId = selectEl.value || null; 
+    
+    let custName = document.getElementById("customerName").value;
+    if (!custName && selectedClientId) { custName = selectEl.options[selectEl.selectedIndex].text; } 
+    else if (!custName) { custName = "عميل نقدي"; }
+
+    const notes = document.getElementById("orderNotes").value;
+    const deliveryTime = document.getElementById("deliveryTime").value; 
+    const dPct = parseFloat(document.getElementById("discountPercent").value) || 0;
+    const dAmt = parseFloat(document.getElementById("discountAmount").value) || 0;
+    const receiptNum = EDITING_ORDER_ID ? EDITING_RECEIPT_NUM : Date.now().toString();
+
+    const orderData = {
+        id: EDITING_ORDER_ID || 'local_' + Date.now(),
+        branch_id: CURRENT_BRANCH, cashier_id: CURRENT_USER.id, receipt_number: receiptNum,
+        total_amount: total, customer_name: custName, notes: notes, 
+        discount_percentage: dPct, discount_amount: dAmt, payment_method: 'cash',
+        client_id: selectedClientId, delivery_time: deliveryTime || null,
+        created_at: new Date().toISOString(),
+        items: entries.map(e => ({ product_id: e.id, quantity: e.qty, unit_price: e.base_price }))
+    };
+
+    if(!EDITING_ORDER_ID) {
+        offlineOrders.push(orderData);
+        localStorage.setItem("offlineOrders", JSON.stringify(offlineOrders));
+    } else {
+        if (navigator.onLine) {
+            try {
+                await supabaseClient.from("orders").update({
+                    total_amount: total, customer_name: custName, notes: notes, 
+                    discount_percentage: dPct, discount_amount: dAmt,
+                    client_id: selectedClientId, delivery_time: deliveryTime || null
+                }).eq("id", EDITING_ORDER_ID);
+                await supabaseClient.from("order_items").delete().eq("order_id", EDITING_ORDER_ID);
+                const orderItems = entries.map(e => ({ order_id: EDITING_ORDER_ID, product_id: e.id, quantity: e.qty, unit_price: e.base_price }));
+                await supabaseClient.from("order_items").insert(orderItems);
+            } catch (err) { alert("حدث خطأ أثناء تعديل الفاتورة أونلاين"); }
+        } else {
+            alert("لا يمكنك تعديل فاتورة قديمة بدون إنترنت!");
+            btn.disabled = false; btn.innerHTML = "تأكيد وطباعة 🖨️";
+            return;
+        }
+    }
+
+    // تسجيل البيعة في السجل بتاع الشفت دايما
+    logShiftSale(CURRENT_SHIFT.id, receiptNum, total);
+
+    printReceipt(receiptNum, entries, custName, notes, dAmt);
+    resetCartUI(); closeKeyboard();
+    
+    if (navigator.onLine) {
+        syncOfflineOrders();
+    }
+});
+
+function openEditOrderModal() {
+    if (!navigator.onLine) return alert("لا يمكنك البحث عن فواتير قديمة أثناء انقطاع الإنترنت!");
+    document.getElementById('editOrderModal').classList.add("open"); 
+    document.getElementById('searchReceiptInput').value = ""; 
+    numericBuffers.searchReceiptInput = ""; 
+    document.getElementById('searchReceiptInput').focus(); 
+}
+function closeEditOrderModal() { document.getElementById('editOrderModal').classList.remove("open"); closeKeyboard(); }
+
+async function searchOrderForEdit() {
+    const rawInput = document.getElementById('searchReceiptInput').value.trim();
+    if(!rawInput) return alert("اكتب رقم الفاتورة الأول!");
+    const btn = document.getElementById('searchOrderBtn'); btn.disabled = true; btn.textContent = "جاري البحث...";
+
+    let cleanNum = rawInput.replace("R-", ""); 
+
+    try {
+        const { data: order, error: orderError } = await supabaseClient
+            .from("orders").select("*").or(`receipt_number.eq.${cleanNum},receipt_number.eq.R-${cleanNum}`).single();
+            
+        if(orderError || !order) throw new Error("الفاتورة دي مش موجودة أو الرقم غلط!");
+
+        const { data: items, error: itemsError } = await supabaseClient.from("order_items").select("*, products(*)").eq("order_id", order.id);
+        if(itemsError) throw itemsError;
+
+        cart = {};
+        items.forEach(item => {
+            cart[item.product_id] = { id: item.product_id, name: item.products.name, base_price: item.unit_price, qty: item.quantity, barcode: item.products.barcode };
+        });
+
+        if (order.client_id) {
+            document.getElementById("b2bClientSelect").value = order.client_id;
+            await handleClientChange(); 
+        } else {
+            document.getElementById("b2bClientSelect").value = "";
+            await handleClientChange();
+        }
+
+        document.getElementById("customerName").value = order.customer_name === "عميل نقدي" ? "" : (order.customer_name || "");
+        document.getElementById("orderNotes").value = order.notes || "";
+        if(order.delivery_time) document.getElementById("deliveryTime").value = order.delivery_time.slice(0,16);
+        document.getElementById("discountPercent").value = order.discount_percentage || "";
+        document.getElementById("discountAmount").value = order.discount_amount || "";
+        numericBuffers.discountPercent = document.getElementById("discountPercent").value;
+        numericBuffers.discountAmount = document.getElementById("discountAmount").value;
+        textBuffers.customerName = document.getElementById("customerName").value;
+        textBuffers.orderNotes = document.getElementById("orderNotes").value;
+
+        EDITING_ORDER_ID = order.id; EDITING_RECEIPT_NUM = order.receipt_number;
+
+        const checkoutBtn = document.getElementById('checkoutBtn'); checkoutBtn.innerHTML = "حفظ التعديل وطباعة 🖨️"; checkoutBtn.className = "w-full py-4 rounded-2xl font-black text-xl text-white mb-2 transition-colors bg-indigo-600 hover:bg-indigo-700";
+
+        updateCart(); closeEditOrderModal(); alert("تم استرجاع الفاتورة للسلة.. تقدر تعدل براحتك وتدوس حفظ.");
+    } catch (err) { alert(err.message || "حدث خطأ أثناء البحث"); } 
+    finally { btn.disabled = false; btn.textContent = "بحث واسترجاع للسلة"; }
+}
+
+document.getElementById("endShiftBtn").addEventListener("click", () => { 
+    if (!navigator.onLine && offlineOrders.length > 0) return alert("هناك فواتير قيد الحفظ! يرجى الانتظار حتى عودة الإنترنت لتقفيل الوردية بدقة.");
+    document.getElementById("endShiftModal").classList.add("open"); 
+});
+
+// إغلاق الشيفت بالاعتماد على الحساب المحلي فقط!
+document.getElementById("confirmEndShiftBtn").addEventListener("click", async () => {
+  const actualCash = document.getElementById("actualCashInput").value;
+  if(!actualCash) return alert("أدخل النقدية الفعلية!");
+  const btn = document.getElementById("confirmEndShiftBtn"); btn.disabled = true; btn.textContent = "جاري الإغلاق...";
+
+  // الجرد بيقرا من السجل الداخلي وميتأثرش بالنت
+  const shiftTotal = getShiftTotal(CURRENT_SHIFT.id);
+
+  await supabaseClient.from("cashier_shifts").update({
+    status: "closed", closed_at: new Date().toISOString(), actual_cash: actualCash, expected_cash: shiftTotal + Number(CURRENT_SHIFT.opening_cash), total_sales: shiftTotal
+  }).eq("id", CURRENT_SHIFT.id);
+
+  printZReport(shiftTotal, actualCash, CURRENT_SHIFT.opening_cash);
+
+  setTimeout(async () => { await supabaseClient.auth.signOut(); window.open('', '_self', ''); window.close(); setTimeout(() => { window.location.href = "index.html"; }, 500); }, 2000);
+});
+
+function formatDDMMYYYY(dateObj) {
+  const d = new Date(dateObj);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function printReceipt(num, items, cust, note, disc) {
+  const nameEn = escapeHtml(branchSettings.bakery_name);
+  const logoUrl = escapeHtml(branchSettings.logo_url);
+  const welcomeMsg = escapeHtml(branchSettings.welcome_message);
+
+  const now = new Date();
+  const dateStr = formatDDMMYYYY(now);
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); 
+
+  let html = ``;
+  if (logoUrl) html += `<img src="${logoUrl}" id="receiptLogo" class="r-logo">`;
+  html += `<div class="r-title">${nameEn}</div>`;
+  html += `<div class="r-divider"></div>`;
+  html += `<div class="r-row"><span>رقم:</span><span style="font-size: 11px;">${escapeHtml(num)}</span></div>`;
+  html += `<div class="r-row"><span>التاريخ:</span><span dir="ltr" style="font-size: 11px;">${dateStr} ${timeStr}</span></div>`;
+  html += `<div class="r-row"><span>الكاشير:</span><span>${escapeHtml(CURRENT_CASHIER_NAME)}</span></div>`;
+  if(cust) html += `<div class="r-row"><span>العميل:</span><span>${escapeHtml(cust)}</span></div>`;
+  html += `<div class="r-divider"></div><table><tr><th>الصنف</th><th>سعر</th><th>ك</th><th>ج</th></tr>`;
+  items.forEach(i => html += `<tr><td>${escapeHtml(i.name)}</td><td>${Number(i.base_price).toFixed(2)}</td><td>${i.qty}</td><td>${(i.base_price*i.qty).toFixed(2)}</td></tr>`);  
+  html += `</table><div class="r-divider"></div><div class="r-row"><span>الإجمالي الفرعي:</span><span>${subtotal.toFixed(2)}</span></div>`;
+  if(disc > 0) html += `<div class="r-row"><span>الخصم:</span><span>-${disc.toFixed(2)}</span></div>`;
+  html += `<div class="r-row font-bold"><span>المطلوب:</span><span>${total.toFixed(2)}</span></div>`;
+  if(note) html += `<div class="r-divider"></div><div class="text-center text-xs">ملاحظة: ${escapeHtml(note)}</div>`;
+  html += `<div class="r-divider"></div><div class="text-center font-bold" style="margin-top:5px;">${welcomeMsg}</div>`;
+  
+  document.getElementById("printArea").innerHTML = html;
+  if (logoUrl) { 
+      let imgElement = document.getElementById("receiptLogo"); 
+      imgElement.onload = function() { window.print(); }; 
+      imgElement.onerror = function() { window.print(); }; 
+  } else { 
+      window.print(); 
+  }
+}
+
+function printZReport(sales, actual, opening) {
+  const openDateStr = formatDDMMYYYY(CURRENT_SHIFT.opened_at);
+  const openTimeStr = new Date(CURRENT_SHIFT.opened_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  const closeDateStr = formatDDMMYYYY(new Date());
+  const closeTimeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  const html = `<div class="r-title">تقرير إغلاق الوردية (Z-Report)</div><div class="r-divider"></div>
+  <div class="r-row"><span>الكاشير:</span><span>${escapeHtml(CURRENT_CASHIER_NAME)}</span></div>
+  <div class="r-row"><span>وقت الفتح:</span><span dir="ltr">${openDateStr} ${openTimeStr}</span></div>
+  <div class="r-row"><span>وقت الإغلاق:</span><span dir="ltr">${closeDateStr} ${closeTimeStr}</span></div>
+  <div class="r-divider"></div>
+  <div class="r-row"><span>العهدة الافتتاحية:</span><span>${Number(opening).toFixed(2)}</span></div>
+  <div class="r-row"><span>إجمالي المبيعات:</span><span>${Number(sales).toFixed(2)}</span></div>
+  <div class="r-divider"></div>
+  <div class="r-row font-bold"><span>المتوقع بالدرج:</span><span>${(Number(sales) + Number(opening)).toFixed(2)}</span></div>
+  <div class="r-row font-bold"><span>الفعلي (الجرد):</span><span>${Number(actual).toFixed(2)}</span></div>
+  <div class="r-row font-bold"><span>العجز/الزيادة:</span><span>${(Number(actual) - (Number(sales) + Number(opening))).toFixed(2)}</span></div>
+  <div class="r-divider"></div><div class="text-center">تم إغلاق الوردية بنجاح</div>`;
+  
+  document.getElementById("printArea").innerHTML = html; window.print();
+}
+
+init();
 </script>
 </body>
 </html>
