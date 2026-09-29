@@ -1171,7 +1171,15 @@ document.getElementById("ordersTableBody").addEventListener("click", (e) => {
         reprintOrder(btn.dataset.id, btn.dataset.receipt, btn.dataset.customer, btn.dataset.total);
     }
 });
-
+// تفعيل التنقل بين القوائم الجانبية
+document.querySelectorAll(".nav-item").forEach(item => { 
+  item.addEventListener("click", () => { 
+    document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active")); 
+    item.classList.add("active"); 
+    document.querySelectorAll(".content-section").forEach(sec => sec.classList.remove("active")); 
+    document.getElementById(`tab-${item.dataset.tab}`).classList.add("active"); 
+  }); 
+});
 initApp();
 </script>
 </body>
