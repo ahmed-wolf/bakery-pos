@@ -2,1177 +2,193 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة الإدارة | مخبز العائلة</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>تسجيل الدخول | مخبز العائلة</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<!-- مكتبة الكيبورد التاتش -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/css/index.css">
+<script src="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/index.js"></script>
+
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root { --cream: #F6EEDD; --cream-2: #EFE4CB; --paper: #FFFDF8; --crust: #3D2B1F; --crust-2: #2A1D15; --crust-3: #4A362A; --ink: #2B2118; --ink-soft: #6B5C4C; --honey: #C98A3D; --sage: #4C7A4C; --teal: #3D6E8C; --brick: #A8453A; --border: rgba(61,43,31,0.10); }
-  body { font-family: 'Tajawal', sans-serif; background: #FAF7F0; color: var(--ink); }
-  .font-display { font-family: 'Cairo', sans-serif; }
-  .tabular { font-variant-numeric: tabular-nums; font-family: 'Cairo', sans-serif; }
-  ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-thumb { background: var(--honey); border-radius: 8px; }
-  .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; color: rgba(246,238,221,0.65); font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.15s; position: relative; }
-  .nav-item.active { background: var(--crust-3); color: var(--cream); }
-  .content-section { display: none; animation: fadeUp 0.25s ease; } .content-section.active { display: block; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-  .stat-card { background: var(--paper); border: 1px solid var(--border); border-radius: 18px; }
-  .stock-row td { padding: 12px 20px; border-bottom: 1px solid var(--border); }
-  .status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
-  .app-modal { background: var(--cream); }
-  .modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(20, 12, 6, 0.6); display: none; align-items: center; justify-content: center; }
-  .modal-overlay.open { display: flex; }
-  .form-input, .form-select { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; color: var(--ink); }
-  .form-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; display: block; }
-
-  #printArea { display: none; }
-  @media print {
-    @page { margin: 0; size: 80mm auto; }
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; }
-    #printArea { 
-        display: block; position: absolute; top: 0; right: 0; 
-        width: 75mm; padding-right: 12mm; padding-left: 2mm; 
-        box-sizing: border-box; direction: rtl;
-        background: #fff; color: #000; font-family: 'Tajawal', sans-serif; font-size: 12px; 
-    }
-    .r-logo { max-width: 80px; margin: 0 auto 5px auto; display: block; filter: grayscale(100%) contrast(300%); }
-    .r-title { font-size: 16px; font-weight: bold; text-align: center; }
-    .r-divider { border-top: 1px dashed #000; margin: 8px 0; }
-    .r-row { display: flex; justify-content: space-between; }
-    table { width: 100%; text-align: right; border-collapse: collapse; margin: 8px 0; }
-    th { border-bottom: 1px dashed #000; padding-bottom: 5px; font-size: 11px; }
-    td { padding-top: 5px; padding-bottom: 5px; font-size: 12px; font-weight: bold; }
-    th:nth-child(1), td:nth-child(1) { width: 45%; text-align: right; padding-left: 3px; }
-    th:nth-child(2), td:nth-child(2) { width: 20%; text-align: center; }
-    th:nth-child(3), td:nth-child(3) { width: 15%; text-align: center; }
-    th:nth-child(4), td:nth-child(4) { width: 20%; text-align: left; }
-  }
+  :root { --cream: #F6EEDD; --paper: #FFFDF8; --crust: #3D2B1F; --ink: #2B2118; --honey: #C98A3D; --brick: #A8453A; --border: rgba(61,43,31,0.12); }
+  body { font-family: 'Tajawal', sans-serif; background: var(--crust); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; overscroll-behavior: none; }
+  .login-card { background: var(--cream); border-radius: 24px; width: 380px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); overflow: hidden; position: relative; z-index: 10; margin-bottom: 20px; }
+  .form-input { width: 100%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 15px; font-weight: bold; }
+  .form-input:focus { outline: 2px solid var(--honey); }
+  
+  /* ستايل الكيبورد */
+  #keyboardWrapper { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000; background: #e2e8f0; padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); transition: transform 0.3s ease-in-out; transform: translateY(100%); }
+  #keyboardWrapper.show { transform: translateY(0); }
+  .simple-keyboard { color: #000; font-weight: bold; }
+  
+  /* تشفير الباسورد عشان كروم ميتدخلش نهائيا */
+  .secure-input { -webkit-text-security: disc; font-family: text-security-disc, 'Tajawal', sans-serif; }
 </style>
 </head>
-<body class="h-screen overflow-hidden">
-<div class="h-screen flex flex-row-reverse">
-  <aside class="w-64 shrink-0 flex flex-col" style="background: var(--crust);">
-    <div class="flex items-center gap-3 px-6 py-6 text-cream">
-      <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-yellow-600">🥐</div>
-      <div>
-        <h1 class="font-display font-bold text-base text-white">مخبز العائلة</h1>
-        <p class="text-[11px] text-gray-400">مرحباً <span id="adminNameDisplay"></span></p>
-      </div>
-    </div>
-    <nav class="flex-1 px-6 py-2 flex flex-col gap-1.5 overflow-y-auto">
-      <div class="nav-item active" data-tab="overview"><span>📊</span><span>نظرة عامة</span></div>
-      <div class="nav-item" data-tab="inventory"><span>📦</span><span>المخزن والإنتاج</span></div>
-      <div class="nav-item" data-tab="products"><span>🥐</span><span>المنتجات والخامات</span></div>
-      <div class="nav-item" data-tab="clients"><span>🤝</span><span>عملاء الشركات (B2B)</span></div>
-      <div class="nav-item" data-tab="shifts"><span>👥</span><span>الورديات والمبيعات</span></div>
-      <div class="nav-item" data-tab="hr"><span>🏢</span><span>الموارد البشرية والإعدادات</span></div>
-    </nav>
-    <div class="px-6 py-5">
-      <button onclick="window.location.href='pos_1.html'" class="w-full text-center text-xs font-bold py-3 rounded-lg mb-3 bg-green-600 text-white hover:bg-green-700">🛒 الانتقال لشاشة الكاشير</button>
-      <button id="logoutBtn" class="w-full text-center text-xs font-bold py-2 rounded-lg mb-3 text-red-400 bg-red-900 bg-opacity-30">🚪 تسجيل الخروج</button>
-    </div>
-  </aside>
-
-  <main class="flex-1 overflow-y-auto">
-    <div class="max-w-6xl mx-auto px-8 py-8">
-      
-      <!-- بداية الداش بورد الاحترافية -->
-      <section id="tab-overview" class="content-section active">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="font-display font-extrabold text-2xl">📊 نظرة عامة وتحليل المبيعات</h2>
-            <div class="flex gap-2 items-center bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
-                <span class="text-xs font-bold text-gray-500">من:</span>
-                <input type="date" id="dashStartDate" class="form-input text-sm py-1 px-2">
-                <span class="text-xs font-bold text-gray-500">إلى:</span>
-                <input type="date" id="dashEndDate" class="form-input text-sm py-1 px-2">
-                <button onclick="loadDashboardStats()" class="bg-yellow-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:bg-yellow-700 transition">تحديث الأرقام 🔄</button>
-            </div>
-        </div>
-        
-        <div class="grid grid-cols-4 gap-5 mb-8">
-          <div class="stat-card p-5 border-t-4 border-t-blue-500 shadow-sm">
-              <p class="text-xs text-gray-500 font-bold mb-1">إجمالي المبيعات</p>
-              <p id="dashTotalSales" class="font-black text-3xl text-gray-800 tabular">0.00 ج</p>
-          </div>
-          <div class="stat-card p-5 border-t-4 border-t-green-500 shadow-sm">
-              <p class="text-xs text-gray-500 font-bold mb-1">عدد الطلبات (فواتير)</p>
-              <p id="dashOrderCount" class="font-black text-3xl text-gray-800 tabular">0</p>
-          </div>
-          <div class="stat-card p-5 border-t-4 border-t-purple-500 shadow-sm">
-              <p class="text-xs text-gray-500 font-bold mb-1">مبيعات الشركات (B2B)</p>
-              <p id="dashB2BSales" class="font-black text-3xl text-gray-800 tabular">0.00 ج</p>
-          </div>
-          <div class="stat-card p-5 border-t-4 border-t-yellow-500 shadow-sm">
-              <p class="text-xs text-gray-500 font-bold mb-1">متوسط قيمة الفاتورة</p>
-              <p id="dashAvgOrder" class="font-black text-3xl text-gray-800 tabular">0.00 ج</p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="stat-card overflow-hidden shadow-sm">
-                <h3 class="p-4 font-bold border-b bg-gray-50 flex justify-between items-center">
-                    <span>🔥 الأصناف الأكثر مبيعاً</span>
-                    <span class="text-xs text-gray-400 font-normal">خلال الفترة المحددة</span>
-                </h3>
-                <div class="overflow-y-auto max-h-80">
-                    <table class="w-full text-sm text-right">
-                        <thead>
-                            <tr class="bg-gray-100 border-b">
-                                <th class="p-3">اسم الصنف</th>
-                                <th class="p-3">الكمية المباعة</th>
-                                <th class="p-3">الإيراد</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dashTopProductsBody">
-                            <tr><td colspan="3" class="text-center p-6 text-gray-500">جاري تحميل البيانات...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="stat-card p-6 flex flex-col justify-center items-center bg-gradient-to-br from-cream to-white border border-yellow-200">
-                <div class="w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-4 bg-yellow-100 border-4 border-yellow-500">🚀</div>
-                <h3 class="font-bold text-xl text-gray-800 mb-2">أداء الفرع ممتاز</h3>
-                <p class="text-sm text-gray-500 text-center">النظام يعمل بكفاءة. يتم مزامنة المبيعات اللحظية، تحديث المخازن، وإدارة تقارير الورديات تلقائياً عبر السيرفرات السحابية.</p>
-            </div>
-        </div>
-      </section>
-      <!-- نهاية الداش بورد الاحترافية -->
-
-      <section id="tab-inventory" class="content-section">
-        <div class="mb-6 flex justify-between">
-          <h2 class="font-display font-extrabold text-2xl">📦 المخزن والإنتاج</h2>
-          <div class="flex gap-3">
-            <button onclick="document.getElementById('modalOverlayBase').classList.add('open')" class="px-5 py-3 rounded-xl bg-yellow-600 font-bold text-sm">🥐 تسجيل إنتاج جديد</button>
-            <button onclick="openReceiptModal()" class="px-5 py-3 rounded-xl border border-gray-300 font-bold text-sm">🧾 تسجيل فاتورة خامات</button>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-5">
-          <div class="stat-card"><h3 class="p-4 font-bold border-b">🌾 رصيد الخامات</h3><table class="w-full text-sm"><thead><tr class="bg-gray-100"><th class="p-2">الاسم</th><th class="p-2">الرصيد</th></tr></thead><tbody id="ingredientStockBody"></tbody></table></div>
-          <div class="stat-card"><h3 class="p-4 font-bold border-b">🥐 رصيد المنتجات الجاهزة</h3><table class="w-full text-sm"><thead><tr class="bg-gray-100"><th class="p-2">المنتج</th><th class="p-2">الرصيد</th></tr></thead><tbody id="productStockBody"></tbody></table></div>
-        </div>
-      </section>
-
-      <section id="tab-products" class="content-section">
-        <div class="mb-6 flex justify-between items-center">
-          <h2 class="font-display font-extrabold text-2xl">🥐 المنتجات</h2>
-          <button onclick="openProductModal()" class="px-5 py-3 rounded-xl bg-yellow-600 font-bold text-sm">➕ إضافة منتج جديد</button>
-        </div>
-        <div class="stat-card mb-8">
-          <table class="w-full text-sm text-right">
-            <thead>
-              <tr class="bg-gray-100">
-                <th class="p-3">اسم المنتج</th>
-                <th class="p-3">السعر الأساسي</th>
-                <th class="p-3">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody id="productsTableBody"></tbody>
-          </table>
-        </div>
-
-        <div class="mb-6 flex justify-between items-center">
-          <h2 class="font-display font-extrabold text-2xl">🌾 الخامات المسجلة بالسيستم</h2>
-          <button id="addNewIngBtnStandAlone" class="px-5 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 font-bold text-sm">➕ إضافة خامة جديدة</button>
-        </div>
-        <div class="stat-card">
-          <table class="w-full text-sm text-right">
-            <thead>
-              <tr class="bg-gray-100">
-                <th class="p-3">اسم الخامة</th>
-                <th class="p-3">المعيار (الوحدة)</th>
-                <th class="p-3">تعديل</th>
-              </tr>
-            </thead>
-            <tbody id="ingredientsTableBody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="tab-clients" class="content-section">
-        <div class="mb-6 flex justify-between items-center">
-          <h2 class="font-display font-extrabold text-2xl">🤝 عملاء الجملة والشركات</h2>
-          <button onclick="openAddClientModal()" class="px-5 py-3 rounded-xl bg-yellow-600 font-bold text-sm">➕ تسجيل شركة جديدة</button>
-        </div>
-        <div class="stat-card mb-8">
-          <table class="w-full text-sm text-right">
-            <thead>
-              <tr class="bg-gray-100">
-                <th class="p-4">اسم الشركة</th>
-                <th class="p-4">إعدادات أسعار الشركة</th>
-              </tr>
-            </thead>
-            <tbody id="clientsTableBody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="tab-shifts" class="content-section">
-        <h2 class="font-display font-extrabold text-2xl mb-6">👥 الورديات والمبيعات</h2>
-        <div class="stat-card mb-8">
-          <h3 class="p-4 font-bold border-b bg-gray-50 rounded-t-18">سجل الورديات</h3>
-          <table class="w-full text-sm text-right"><thead><tr class="bg-gray-100 border-b"><th class="p-3">الكاشير</th><th class="p-3">الفتح</th><th class="p-3">الإغلاق</th><th class="p-3">المتوقع</th><th class="p-3">الفعلي</th></tr></thead><tbody id="shiftsTableBody"></tbody></table>
-        </div>
-        <div class="stat-card">
-          <h3 class="p-4 font-bold border-b bg-gray-50 rounded-t-18 flex justify-between items-center">
-            <span>سجل الفواتير (لإعادة الطباعة)</span>
-            <button onclick="loadOrders()" class="text-xs bg-gray-200 px-3 py-1 rounded-md font-bold">تحديث 🔄</button>
-          </h3>
-          <div class="overflow-x-auto max-h-96">
-            <table class="w-full text-sm text-right">
-              <thead><tr class="bg-gray-100 border-b"><th class="p-3">رقم الفاتورة</th><th class="p-3">التاريخ والوقت</th><th class="p-3">العميل / الشركة</th><th class="p-3">الإجمالي</th><th class="p-3">إجراءات</th></tr></thead>
-              <tbody id="ordersTableBody">
-                  <tr><td colspan="5" class="text-center p-4">جاري تحميل البيانات...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-hr" class="content-section">
-        <div class="mb-6 flex justify-between items-center">
-          <h2 class="font-display font-extrabold text-2xl">🏢 الموارد البشرية والإعدادات</h2>
-          <button onclick="openReceiptSettings()" class="bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold text-sm hover:bg-yellow-600 transition">⚙️ إعدادات الفاتورة</button>
-        </div>
-        <div class="stat-card overflow-hidden">
-          <div class="px-5 py-4 flex justify-between items-center border-b">
-            <h3 class="font-display font-bold text-base">📋 الموظفين المسجلين</h3>
-            <div class="flex gap-2">
-              <button onclick="document.getElementById('addStaffModal').classList.add('open')" class="text-xs font-bold px-4 py-2 rounded-lg bg-green-600 text-white">➕ إضافة موظف</button>
-              <button onclick="loadPayrollSummary()" class="text-xs font-bold px-4 py-2 rounded-lg bg-gray-200">🔄 تحديث</button>
-            </div>
-          </div>
-          <table class="w-full text-sm text-right">
-            <thead><tr class="bg-gray-100"><th class="p-3">الاسم</th><th class="p-3">الدور</th><th class="p-3">الراتب</th></tr></thead>
-            <tbody id="payrollTableBody"></tbody>
-          </table>
-        </div>
-      </section>
-
-    </div>
-  </main>
-</div>
-
-<!-- ================= Modals ================= -->
-
-<!-- مودال إضافة شركة -->
-<div id="addClientModal" class="modal-overlay">
-  <div class="app-modal p-6 rounded-xl w-[400px]">
-    <h3 class="font-bold text-xl mb-4">➕ إضافة شركة جديدة</h3>
-    <input type="text" id="newClientName" placeholder="اسم الشركة (مثال: مستشفى الصفوة)" class="form-input mb-4">
-    <div class="flex gap-2">
-        <button onclick="saveNewClient()" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-bold">حفظ الشركة</button>
-        <button onclick="document.getElementById('addClientModal').classList.remove('open')" class="flex-1 bg-gray-500 text-white py-3 rounded-lg font-bold">إلغاء</button>
-    </div>
+<body>
+<div class="login-card">
+  <div class="px-8 pt-8 pb-6 text-center" style="background: var(--crust); color: var(--cream);">
+    <div class="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center text-xl mb-3" style="background: var(--honey);">🥐</div>
+    <h1 class="font-display font-bold text-xl">مخبز العائلة</h1>
   </div>
-</div>
-
-<!-- مودال تسعير خاص للشركة -->
-<div id="clientPricesModal" class="modal-overlay">
-  <div class="app-modal p-6 rounded-xl w-[500px]">
-    <h3 class="font-bold text-xl mb-2" id="clientPricesTitle">قائمة الأسعار المخصصة</h3>
-    <p class="text-xs text-gray-500 mb-4 border-b pb-2">أي منتج هتسيب خانته فاضية، السيستم هيبيعه للشركة دي بالسعر الأساسي.</p>
-    
-    <div class="max-h-80 overflow-y-auto pr-2 mb-4" id="clientPricesList">
-        <!-- هتتملي بالجافاسكريبت بالمنتجات -->
-    </div>
-    
-    <div class="flex gap-2">
-        <button onclick="saveClientPrices()" id="saveClientPricesBtn" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold">حفظ الأسعار</button>
-        <button onclick="document.getElementById('clientPricesModal').classList.remove('open')" class="flex-1 bg-gray-500 text-white py-3 rounded-lg font-bold">إلغاء</button>
-    </div>
-  </div>
-</div>
-
-<div id="receiptSettingsModal" class="modal-overlay">
-  <div class="app-modal p-6 rounded-xl w-[400px]">
-    <h3 class="font-bold text-xl mb-4 text-center">⚙️ إعدادات الفاتورة والفرع</h3>
-    <label class="form-label">اسم المخبز:</label>
-    <input type="text" id="bakeryNameEn" placeholder="مثال: مخبز العائلة" class="form-input mb-3">
-    <label class="form-label">رابط صورة اللوجو (URL):</label>
-    <input type="text" id="bakeryLogoUrl" placeholder="رابط صورة اللوجو (اختياري)" class="form-input mb-3">
-    <label class="form-label">رسالة الترحيب أسفل الفاتورة:</label>
-    <input type="text" id="welcomeMessage" placeholder="شكراً لزيارتكم" class="form-input mb-4">
-    <div class="flex gap-2">
-        <button onclick="saveReceiptSettings()" class="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold">حفظ التعديلات</button>
-        <button onclick="closeReceiptSettings()" class="flex-1 bg-gray-500 text-white py-2 rounded-lg font-bold">إلغاء</button>
-    </div>
-  </div>
-</div>
-
-<div id="addStaffModal" class="modal-overlay">
-  <div class="app-modal w-[400px] rounded-2xl overflow-hidden shadow-2xl">
-    <div class="px-6 py-4 bg-gray-900 text-white flex justify-between"><h3 class="font-bold">➕ إضافة موظف جديد</h3><button onclick="document.getElementById('addStaffModal').classList.remove('open')">✕</button></div>
-    <div class="px-6 py-5">
-      <label class="form-label">الاسم بالكامل (اللي هيظهر في شاشة الدخول)</label>
-      <input id="staffName" type="text" class="form-input mb-3" placeholder="مثال: محمود علي">
-      <label class="form-label">كلمة المرور (اكتب أي رقم براحتك)</label>
-      <input id="staffPass" type="password" class="form-input mb-3" placeholder="••••">
-      <div class="flex gap-2 mb-4">
-        <div class="flex-1"><label class="form-label">الصلاحية</label><select id="staffRole" class="form-select"><option value="cashier">كاشير (نقطة بيع فقط)</option><option value="admin">مدير نظام</option></select></div>
-        <div class="flex-1"><label class="form-label">الراتب الأساسي</label><input id="staffSalary" type="number" class="form-input" value="0"></div>
-      </div>
-      <button id="saveNewStaffBtn" class="w-full py-3 bg-green-600 text-white font-bold rounded-xl">حفظ وإنشاء الحساب</button>
-    </div>
-  </div>
-</div>
-
-<div id="modalOverlayBase" class="modal-overlay">
-  <div class="app-modal p-6 rounded-xl w-[400px]">
-    <h3 class="font-bold mb-4">تسجيل إنتاج</h3>
-    <select id="prodProductSelect" class="form-select mb-2"></select>
-    <input id="prodQtyInput" type="number" class="form-input mb-4" placeholder="الكمية المنتجة (مثال: 50)">
-    <button id="prodConfirmBtn" class="bg-green-600 text-white p-2 rounded w-full font-bold">تأكيد</button>
-    <button onclick="document.getElementById('modalOverlayBase').classList.remove('open')" class="w-full mt-2">إلغاء</button>
-  </div>
-</div>
-
-<div id="receiptModalOverlay" class="modal-overlay">
-  <div class="app-modal p-6 rounded-xl w-[400px]">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="font-bold">فاتورة خامات</h3>
-      <button id="addNewIngBtn" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded font-bold transition">➕ إضافة خامة جديدة للكتالوج</button>
-    </div>
-    <select id="receiptIngredientSelect" class="form-select mb-2"></select>
-    <input id="receiptQtyInput" type="number" class="form-input mb-2" placeholder="الكمية (أرقام فقط)">
-    <input id="receiptUnitCostInput" type="number" class="form-input mb-4" placeholder="السعر (اختياري)">
-    <label class="block text-xs font-bold mb-1">صورة الفاتورة (اختياري)</label>
-    <input type="file" id="receiptImageUpload" class="form-input mb-4" accept="image/*" capture="environment">
-    <button id="receiptConfirmBtn" class="bg-green-600 text-white p-2 rounded w-full font-bold">تأكيد</button>
-    <button onclick="document.getElementById('receiptModalOverlay').classList.remove('open')" class="w-full mt-2">إلغاء</button>
-  </div>
-</div>
-
-<div id="productModalOverlay" class="modal-overlay">
-  <div class="app-modal p-6 rounded-xl w-[500px]">
-    <h3 id="productModalTitle" class="font-bold mb-4">إضافة منتج جديد وتحديد وصفته</h3>
-    <input id="newProdName" type="text" class="form-input mb-2" placeholder="اسم المنتج">
-    <div class="flex gap-2 mb-2">
-        <input id="newProdBarcode" type="text" class="form-input flex-1" placeholder="الباركود (اختياري)">
-        <input id="newProdPrice" type="number" class="form-input w-28" placeholder="السعر">
-    </div>
-    <select id="newProdCategory" class="form-select mb-4">
-      <option value="bakery">مخبوزات</option>
-      <option value="sweets">حلويات</option>
+  <form id="loginForm" class="px-8 py-7">
+    <label class="block text-xs font-bold mb-2" style="color: var(--ink);">اختر اسم المستخدم</label>
+    <select id="loginEmail" class="form-input mb-4 cursor-pointer">
+      <option value="">جاري تحميل القائمة...</option>
     </select>
-    <div class="border border-gray-200 bg-gray-50 p-3 rounded-lg mb-4">
-      <p class="text-sm font-bold text-teal-700 mb-2">الوصفة (الخامات المستخدمة)</p>
-      <div class="flex gap-2 mb-2">
-          <select id="recipeIngredientSelect" class="form-select flex-1 text-xs"></select>
-          <input id="recipeQtyInput" type="number" class="form-input w-24 text-xs" placeholder="الكمية">
-          <button id="addRecipeIngredientBtn" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold">أضف</button>
-      </div>
-      <ul id="recipeList" class="text-xs text-gray-700 max-h-32 overflow-y-auto bg-white rounded border border-gray-200 p-1">
-          <li class="p-1 text-center text-gray-400">لم يتم إضافة خامات للوصفة بعد</li>
-      </ul>
-    </div>
-    <button id="productSaveBtn" class="bg-green-600 text-white p-3 rounded-xl w-full font-bold">حفظ المنتج والوصفة</button>
-    <button onclick="document.getElementById('productModalOverlay').classList.remove('open')" class="w-full mt-2 font-bold text-sm text-gray-500">إلغاء</button>
-  </div>
+
+    <label class="block text-xs font-bold mb-2" style="color: var(--ink);">كلمة المرور</label>
+    <!-- تم تغيير النوع لـ text مع إخفاء بنظام CSS لمنع Autofill -->
+    <input id="loginPassword" type="text" required class="form-input mb-2 secure-input" placeholder="••••" autocomplete="off" spellcheck="false">
+
+    <p id="loginErrorMsg" class="text-xs font-bold mb-2 hidden text-center" style="color: var(--brick);"></p>
+    <button type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-bold text-sm mt-4 transition-colors" style="background: var(--honey); color: #2A1400;">دخول</button>
+  </form>
 </div>
 
-<div id="printArea"></div>
+<!-- حاوية الكيبورد -->
+<div id="keyboardWrapper">
+    <div class="flex justify-between mb-2">
+        <span class="text-sm font-bold text-gray-700 px-2">لوحة الأرقام (كلمة المرور)</span>
+        <button type="button" onclick="closeKeyboard()" class="text-red-500 font-bold text-sm bg-white px-3 py-1 rounded">إغلاق ✕</button>
+    </div>
+    <div class="simple-keyboard" dir="ltr"></div>
+</div>
 
 <script>
-const SUPABASE_URL = "https://rjhsjekwixavydzkghqt.supabase.co";
-const SUPABASE_KEY = "sb_publishable_lHjuLBBq_tr59ziXYvFSag_UMPkGMkj";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const authCreatorClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+const supabaseClient = supabase.createClient("https://rjhsjekwixavydzkghqt.supabase.co", "sb_publishable_lHjuLBBq_tr59ziXYvFSag_UMPkGMkj");
 
-let CURRENT_USER = null; 
-let CURRENT_BRANCH_ID = null;
-
-let pendingRecipeIngredients = [];
-let EDITING_PRODUCT_ID = null;
-
-// متغيرات العملاء B2B
-let GLOBAL_PRODUCTS = []; // عشان نحتفظ بالمنتجات عشان المودال بتاع الأسعار المخصصة
-let EDITING_CLIENT_ID = null;
-
-function escapeHtml(str) {
-  if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-// دالة تهيئة تواريخ الداش بورد
-function initDashboardDates() {
-    const today = new Date();
-    // نظبط التوقيت عشان التواريخ تطلع صح
-    const formatDate = (d) => {
-        const tzOffset = d.getTimezoneOffset() * 60000;
-        return (new Date(d - tzOffset)).toISOString().split('T')[0];
-    };
-    
-    // افتراضيا يجيب مبيعات اليوم
-    document.getElementById('dashStartDate').value = formatDate(today);
-    document.getElementById('dashEndDate').value = formatDate(today);
-}
-
-// دالة تحميل أرقام الداش بورد من السيرفر
-async function loadDashboardStats() {
-    const startDate = document.getElementById('dashStartDate').value;
-    const endDate = document.getElementById('dashEndDate').value;
-    
-    if(!startDate || !endDate) return alert("الرجاء تحديد تاريخ البداية والنهاية أولاً!");
-
-    const startIso = new Date(startDate + "T00:00:00").toISOString();
-    const endIso = new Date(endDate + "T23:59:59").toISOString();
-
-    try {
-        // 1. جلب الفواتير (Orders)
-        const { data: orders, error: ordersErr } = await supabaseClient
-            .from("orders")
-            .select("id, total_amount, client_id")
-            .gte("created_at", startIso)
-            .lte("created_at", endIso)
-            .eq("branch_id", CURRENT_BRANCH_ID);
-
-        if (ordersErr) throw ordersErr;
-
-        let totalSales = 0;
-        let b2bSales = 0;
-        const orderCount = orders.length;
-        const orderIds = [];
-
-        orders.forEach(o => {
-            const amt = Number(o.total_amount);
-            totalSales += amt;
-            if (o.client_id) b2bSales += amt;
-            orderIds.push(o.id);
-        });
-
-        const avgOrder = orderCount > 0 ? (totalSales / orderCount) : 0;
-
-        // تحديث الكروت
-        document.getElementById("dashTotalSales").textContent = totalSales.toFixed(2) + " ج";
-        document.getElementById("dashOrderCount").textContent = orderCount;
-        document.getElementById("dashB2BSales").textContent = b2bSales.toFixed(2) + " ج";
-        document.getElementById("dashAvgOrder").textContent = avgOrder.toFixed(2) + " ج";
-
-        // 2. جلب الأصناف الأكثر مبيعاً
-        const tbody = document.getElementById("dashTopProductsBody");
-        
-        if (orderIds.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center p-6 text-gray-500">لا توجد مبيعات في هذه الفترة 📭</td></tr>';
-            return;
-        }
-
-        const { data: items, error: itemsErr } = await supabaseClient
-            .from("order_items")
-            .select("quantity, unit_price, products(name)")
-            .in("order_id", orderIds);
-
-        if (itemsErr) throw itemsErr;
-
-        // تجميع المنتجات
-        const productStats = {};
-        items.forEach(item => {
-            const pName = item.products?.name || "منتج محذوف";
-            if (!productStats[pName]) {
-                productStats[pName] = { qty: 0, revenue: 0 };
-            }
-            productStats[pName].qty += Number(item.quantity);
-            productStats[pName].revenue += (Number(item.quantity) * Number(item.unit_price));
-        });
-
-        // ترتيب المنتجات من الأعلى إيراداً للأقل
-        const sortedProducts = Object.entries(productStats).sort((a, b) => b[1].revenue - a[1].revenue);
-
-        tbody.innerHTML = sortedProducts.map(([name, stats]) => `
-            <tr class="border-b hover:bg-gray-50 transition">
-                <td class="p-3 font-bold text-gray-800">${escapeHtml(name)}</td>
-                <td class="p-3 text-center"><span class="bg-gray-200 px-2 py-1 rounded text-xs font-bold">${stats.qty}</span></td>
-                <td class="p-3 text-green-600 font-bold">${stats.revenue.toFixed(2)} ج</td>
-            </tr>
-        `).join("");
-
-    } catch (err) {
-        console.error("Dashboard error:", err);
-        alert("حدث خطأ أثناء تحميل إحصائيات الداش بورد!");
-    }
-}
-
-async function initApp() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) { window.location.href = "index.html"; return; }
-  CURRENT_USER = session.user;
-  const { data } = await supabaseClient.from("staff").select("*").eq("id", CURRENT_USER.id).single();
-  if (data.role === "cashier") { window.location.href = "pos_1.html"; return; }
-  CURRENT_BRANCH_ID = data.branch_id;
-  document.getElementById("adminNameDisplay").textContent = escapeHtml(data.full_name);
+// سحب أسماء الموظفين من الداتابيز
+async function loadStaffList() {
+  const { data, error } = await supabaseClient.from("staff").select("email, full_name, role");
+  const select = document.getElementById("loginEmail");
   
-  loadIngredientsCatalog(); loadIngredientStock(); loadProductStock(); loadProductsTable(); loadShifts(); loadPayrollSummary();
-  loadOrders(); loadClientsList();
-
-  // تشغيل الداش بورد أوتوماتيك مع فتح الصفحة
-  initDashboardDates();
-  loadDashboardStats();
+  if (data && data.length > 0) {
+    select.innerHTML = '<option value="">-- اضغط لاختيار اسمك --</option>' + data.map(s => `<option value="${s.email}">${s.full_name} (${s.role === 'admin' ? 'مدير' : 'كاشير'})</option>`).join("");
+  } else {
+    select.innerHTML = `<option value="">لا يوجد موظفين مسجلين حالياً</option>`;
+  }
 }
+loadStaffList();
 
-// ================= نظام الشركات B2B =================
+// === إعدادات الكيبورد التاتش ===
+let keyboard;
+const passwordInput = document.getElementById("loginPassword");
+const kbWrapper = document.getElementById("keyboardWrapper");
+let passString = ""; // المصدر الوحيد للباسورد
 
-async function loadClientsList() {
-    const { data } = await supabaseClient.from("clients").select("*").eq("branch_id", CURRENT_BRANCH_ID).order('created_at');
-    const tbody = document.getElementById("clientsTableBody");
-    if(!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" class="p-4 text-center text-gray-500">لا يوجد شركات مسجلة</td></tr>`;
-        return;
+function initKeyboard() {
+  keyboard = new window.SimpleKeyboard.default({
+    onChange: input => onChange(input),
+    onKeyPress: button => onKeyPress(button),
+    layout: {
+      default: ["1 2 3", "4 5 6", "7 8 9", "{bksp} 0 {enter}"]
+    },
+    display: {
+        '{bksp}': 'مسح ⌫',
+        '{enter}': 'تأكيد ↵'
     }
-    
-    tbody.innerHTML = data.map(c => `
-        <tr class="border-b hover:bg-gray-50">
-            <td class="p-4 font-bold text-lg">${escapeHtml(c.name)}</td>
-            <td class="p-4">
-                <button onclick="openManagePricesModal('${c.id}', '${escapeHtml(c.name)}')" class="bg-blue-100 text-blue-800 hover:bg-blue-200 px-4 py-2 rounded-lg font-bold text-xs transition">
-                    تحديد أسعار الشركة 🏷️
-                </button>
-            </td>
-        </tr>
-    `).join("");
-}
-
-function openAddClientModal() {
-    document.getElementById("newClientName").value = "";
-    document.getElementById("addClientModal").classList.add("open");
-}
-
-async function saveNewClient() {
-    const name = document.getElementById("newClientName").value;
-    if(!name) return alert("اكتب اسم الشركة!");
-    
-    const { error } = await supabaseClient.from("clients").insert({ branch_id: CURRENT_BRANCH_ID, name: name });
-    if(error) {
-        alert("حدث خطأ: " + error.message);
-    } else {
-        alert("تم حفظ الشركة بنجاح!");
-        document.getElementById("addClientModal").classList.remove("open");
-        loadClientsList();
-    }
-}
-
-async function openManagePricesModal(clientId, clientName) {
-    EDITING_CLIENT_ID = clientId;
-    document.getElementById("clientPricesTitle").textContent = `أسعار مخصصة لـ (${clientName})`;
-    
-    // هنجيب الأسعار الحالية لو متسجلة
-    const { data: currentPrices } = await supabaseClient.from("client_prices").select("product_id, custom_price").eq("client_id", clientId);
-    const priceMap = {};
-    if (currentPrices) {
-        currentPrices.forEach(p => priceMap[p.product_id] = p.custom_price);
-    }
-
-    const listDiv = document.getElementById("clientPricesList");
-    
-    // بناء القائمة بناء على الـ GLOBAL_PRODUCTS اللي اتسحبت في loadProductsTable
-    let html = '';
-    GLOBAL_PRODUCTS.forEach(prod => {
-        let savedPrice = priceMap[prod.id] !== undefined ? priceMap[prod.id] : "";
-        html += `
-            <div class="flex justify-between items-center mb-2 bg-gray-50 p-2 rounded border">
-                <div class="flex-1 font-bold text-sm text-gray-800">${escapeHtml(prod.name)} <span class="text-xs text-gray-400 font-normal ml-2">(${prod.base_price}ج أساسي)</span></div>
-                <input type="number" class="form-input w-24 text-center client-price-input" data-product-id="${prod.id}" value="${savedPrice}" placeholder="أساسي">
-            </div>
-        `;
-    });
-    
-    listDiv.innerHTML = html;
-    document.getElementById("clientPricesModal").classList.add("open");
-}
-
-async function saveClientPrices() {
-    if(!EDITING_CLIENT_ID) return;
-    const btn = document.getElementById("saveClientPricesBtn");
-    btn.textContent = "جاري الحفظ..."; btn.disabled = true;
-
-    const inputs = document.querySelectorAll(".client-price-input");
-    let newPricesToInsert = [];
-
-    inputs.forEach(input => {
-        const val = input.value;
-        if(val && Number(val) >= 0) {
-            newPricesToInsert.push({
-                client_id: EDITING_CLIENT_ID,
-                product_id: input.dataset.productId,
-                custom_price: Number(val)
-            });
-        }
-    });
-
-    try {
-        // نمسح أسعار الشركة دي القديمة بالكامل، ونرمي الجديدة النضيفة بدالها
-        await supabaseClient.from("client_prices").delete().eq("client_id", EDITING_CLIENT_ID);
-        
-        if (newPricesToInsert.length > 0) {
-            const { error } = await supabaseClient.from("client_prices").insert(newPricesToInsert);
-            if(error) throw error;
-        }
-
-        alert("تم حفظ الأسعار للشركة بنجاح! هتبان فوراً عند الكاشير.");
-        document.getElementById("clientPricesModal").classList.remove("open");
-    } catch (err) {
-        alert("حدث خطأ أثناء الحفظ: " + err.message);
-    } finally {
-        btn.textContent = "حفظ الأسعار"; btn.disabled = false;
-    }
-}
-
-// ===================================================
-
-document.getElementById("saveNewStaffBtn").addEventListener("click", async () => {
-  const name = document.getElementById("staffName").value;
-  const rawPass = document.getElementById("staffPass").value;
-  const role = document.getElementById("staffRole").value;
-  const salary = document.getElementById("staffSalary").value;
-
-  if(!name || !rawPass) return alert("الاسم والباسورد مطلوبين!");
-  
-  const btn = document.getElementById("saveNewStaffBtn");
-  btn.textContent = "جاري الإنشاء..."; btn.disabled = true;
-
-  const fakeEmail = `user_${Date.now()}@bakery.local`;
-  const pass = rawPass + "-bakery";
-
-  const { data: authData, error: authErr } = await authCreatorClient.auth.signUp({ email: fakeEmail, password: pass });
-  if(authErr) { alert("حدث خطأ: " + authErr.message); btn.textContent = "حفظ وإنشاء الحساب"; btn.disabled = false; return; }
-  
-  await supabaseClient.from("staff").insert({
-    id: authData.user.id, email: fakeEmail, full_name: name, role: role, basic_salary: salary, branch_id: CURRENT_BRANCH_ID
   });
+}
 
-  alert("تم إضافة الموظف بنجاح!");
-  document.getElementById("addStaffModal").classList.remove("open");
-  document.getElementById("staffName").value = "";
-  document.getElementById("staffPass").value = "";
-  btn.textContent = "حفظ وإنشاء الحساب"; btn.disabled = false;
-  
-  loadPayrollSummary();
-});
+// قفلنا الـ onChange خالص عشان نتجنب الـ Buffer الداخلي للمكتبة
+function onChange(input) {
+    return;
+}
 
-async function createNewIngredient() {
-  const name = prompt("اسم الخامة الجديدة (مثال: زيت، سكر، خميرة):");
-  if(!name) return;
-  let unit = prompt("وحدة القياس (اكتب: gram أو liter أو ml أو kg أو قطعة):", "gram");
-  if(!unit) return;
-
-  if(unit.trim() === "جرام") unit = "gram";
-  if(unit.trim() === "لتر") unit = "liter";
-  if(unit.trim() === "ملي") unit = "ml";
-  if(unit.trim() === "كيلو") unit = "kg";
-  if(unit.trim() === "قطعة" || unit.trim() === "قطعه") unit = "piece";
-
-  const validUnits = ['gram', 'kg', 'liter', 'ml', 'piece'];
-  if (!validUnits.includes(unit)) {
-      alert("معيار غير صحيح! الرجاء إدخال وحدة صحيحة.");
+// الاعتماد بالكامل على ضغطات الزراير
+function onKeyPress(button) {
+  if (button === '{bksp}') {
+      passString = passString.slice(0, -1);
+  } else if (button === '{enter}') {
+      closeKeyboard();
+      document.getElementById("submitBtn").click(); // تفعيل زرار الدخول
       return;
+  } else if (/^[0-9]$/.test(button)) {
+      passString += button;
   }
-
-  const { error } = await supabaseClient.from("ingredients").insert({ name: name, unit: unit });
-  if (error) { alert("حدث خطأ أثناء الإضافة: " + error.message); } 
-  else { alert("تم إضافة الخامة بنجاح!"); await loadIngredientsCatalog(); }
+  passwordInput.value = passString;
 }
 
-document.getElementById("addNewIngBtn").addEventListener("click", createNewIngredient);
-document.getElementById("addNewIngBtnStandAlone").addEventListener("click", createNewIngredient);
+function closeKeyboard() {
+    kbWrapper.classList.remove("show");
+}
 
-document.getElementById("receiptConfirmBtn").addEventListener("click", async () => {
-  const ingId = document.getElementById("receiptIngredientSelect").value;
-  const qtyText = document.getElementById("receiptQtyInput").value;
-  const qty = Number(qtyText); 
-  
-  if(!ingId || !qtyText || isNaN(qty)) return alert("من فضلك اكتب الكمية بشكل صحيح (أرقام فقط)!");
-  
-  const btn = document.getElementById("receiptConfirmBtn");
-  btn.textContent = "جاري الحفظ..."; btn.disabled = true;
-
-  try {
-    await supabaseClient.from("ingredient_receipts").insert({
-      ingredient_id: ingId, quantity: qty, branch_id: CURRENT_BRANCH_ID
-    });
-
-    await supabaseClient.rpc('add_to_ingredient_stock', {
-      p_branch_id: CURRENT_BRANCH_ID,
-      p_ingredient_id: ingId,
-      p_qty: qty
-    });
-
-    alert("تم تسجيل الفاتورة بنجاح ونزلت في المخزن!");
-    document.getElementById("receiptModalOverlay").classList.remove("open");
-    document.getElementById("receiptQtyInput").value = "";
-    loadIngredientStock();
-  } catch (error) {
-    alert("حدث خطأ أثناء الحفظ.");
-  } finally {
-    btn.textContent = "تأكيد"; btn.disabled = false;
-  }
+passwordInput.addEventListener("focus", () => {
+    kbWrapper.classList.add("show");
+    if(!keyboard) initKeyboard();
 });
 
-// ====== سحب الخامات أوتوماتيك وقت الإنتاج ======
-document.getElementById("prodConfirmBtn").addEventListener("click", async () => {
-  const prodId = document.getElementById("prodProductSelect").value;
-  const qtyText = document.getElementById("prodQtyInput").value;
-  const qty = Number(qtyText);
-
-  if(!prodId || !qtyText || isNaN(qty) || qty <= 0) return alert("اكتب الكمية المنتجة بأرقام صحيحة!");
-
-  const btn = document.getElementById("prodConfirmBtn");
-  btn.textContent = "جاري الإنشاء والخصم..."; btn.disabled = true;
-
-  try {
-    await supabaseClient.from("production_batches").insert({ 
-      product_id: prodId, quantity_produced: qty, branch_id: CURRENT_BRANCH_ID, staff_id: CURRENT_USER.id 
-    });
-
-    await supabaseClient.rpc('add_to_product_stock', {
-      p_branch_id: CURRENT_BRANCH_ID,
-      p_product_id: prodId,
-      p_qty: qty
-    });
-
-    // قراءة الوصفة وخصم الخامات من المخزن
-    const { data: recipe } = await supabaseClient
-        .from("product_ingredients")
-        .select("ingredient_id, quantity_grams")
-        .eq("product_id", prodId);
-
-    if (recipe && recipe.length > 0) {
-        for (let item of recipe) {
-            const totalGramsNeeded = item.quantity_grams * qty;
-            await supabaseClient.rpc('add_to_ingredient_stock', {
-                p_branch_id: CURRENT_BRANCH_ID,
-                p_ingredient_id: item.ingredient_id,
-                p_qty: -totalGramsNeeded
-            });
-        }
-    }
-
-    alert("تم تسجيل الإنتاج وخصم الخامات من المخزن بنجاح!");
-    document.getElementById("modalOverlayBase").classList.remove("open");
-    document.getElementById("prodQtyInput").value = "";
-    loadProductStock();
-    loadIngredientStock(); 
-  } catch (error) {
-    alert("حدث خطأ أثناء الإنتاج: " + error.message);
-  } finally {
-    btn.textContent = "تأكيد"; btn.disabled = false;
-  }
-});
-
-
-document.getElementById("addRecipeIngredientBtn").addEventListener("click", () => {
-    const select = document.getElementById("recipeIngredientSelect");
-    const ingId = select.value;
-    const ingName = select.options[select.selectedIndex].text;
-    const qtyText = document.getElementById("recipeQtyInput").value;
-    const qty = Number(qtyText);
-
-    if(!ingId || !qtyText || isNaN(qty) || qty <= 0) {
-        alert("اكتب الكمية صح الأول!");
-        return;
-    }
-
-    const existingIndex = pendingRecipeIngredients.findIndex(i => i.ingredient_id === ingId);
-    if(existingIndex >= 0) {
-        pendingRecipeIngredients[existingIndex].quantity_grams += qty;
-    } else {
-        pendingRecipeIngredients.push({ ingredient_id: ingId, name: ingName, quantity_grams: qty });
-    }
-
-    document.getElementById("recipeQtyInput").value = "";
-    renderPendingRecipe();
-});
-
-function renderPendingRecipe() {
-    const list = document.getElementById("recipeList");
-    if(pendingRecipeIngredients.length === 0) {
-        list.innerHTML = '<li class="p-1 text-center text-gray-400">لم يتم إضافة خامات للوصفة بعد</li>';
-        return;
-    }
-
-    list.innerHTML = pendingRecipeIngredients.map((ing, index) => `
-        <li class="flex justify-between items-center p-1 border-b last:border-b-0">
-            <span>${escapeHtml(ing.name)} (${ing.quantity_grams})</span>
-            <button onclick="removePendingIngredient(${index})" class="text-red-500 font-bold px-2 hover:bg-red-50 rounded">✕</button>
-        </li>
-    `).join("");
-}
-
-window.removePendingIngredient = function(index) {
-    pendingRecipeIngredients.splice(index, 1);
-    renderPendingRecipe();
-}
-
-async function openProductModal(product = null) {
-    document.getElementById("productModalOverlay").classList.add("open");
-    pendingRecipeIngredients = [];
-    EDITING_PRODUCT_ID = null;
-
-    const titleEl = document.getElementById("productModalTitle");
-    const saveBtn = document.getElementById("productSaveBtn");
-
-    if (product) {
-        EDITING_PRODUCT_ID = product.id;
-        document.getElementById("newProdName").value = product.name || "";
-        document.getElementById("newProdBarcode").value = product.barcode || "";
-        document.getElementById("newProdPrice").value = product.base_price || "";
-        titleEl.textContent = "تعديل المنتج ووصفته";
-        saveBtn.textContent = "حفظ التعديلات";
-
-        const { data: recipeRows, error } = await supabaseClient
-            .from("product_ingredients")
-            .select("ingredient_id, quantity_grams, ingredients(name)")
-            .eq("product_id", product.id);
-
-        if (!error && recipeRows) {
-            pendingRecipeIngredients = recipeRows.map(r => ({
-                ingredient_id: r.ingredient_id,
-                name: r.ingredients ? r.ingredients.name : "",
-                quantity_grams: r.quantity_grams
-            }));
-        }
-    } else {
-        document.getElementById("newProdName").value = "";
-        document.getElementById("newProdBarcode").value = "";
-        document.getElementById("newProdPrice").value = "";
-        titleEl.textContent = "إضافة منتج جديد وتحديد وصفته";
-        saveBtn.textContent = "حفظ المنتج والوصفة";
-    }
-
-    renderPendingRecipe();
-}
-
-document.getElementById("productSaveBtn").addEventListener("click", async () => {
-  const name = document.getElementById("newProdName").value;
-  const barcode = document.getElementById("newProdBarcode").value;
-  const priceText = document.getElementById("newProdPrice").value;
-  const price = Number(priceText);
-
-  if(!name || !priceText || isNaN(price)) return alert("اكتب اسم المنتج والسعر بشكل صحيح!");
-
-  const btn = document.getElementById("productSaveBtn");
-  const originalBtnText = btn.textContent;
-  btn.textContent = "جاري الحفظ..."; btn.disabled = true;
-
-  try {
-      let productId;
-
-      if (EDITING_PRODUCT_ID) {
-          const { error: updateError } = await supabaseClient
-              .from("products")
-              .update({ name: name, barcode: barcode, base_price: price })
-              .eq("id", EDITING_PRODUCT_ID);
-          if (updateError) throw updateError;
-
-          productId = EDITING_PRODUCT_ID;
-
-          const { error: deleteError } = await supabaseClient
-              .from("product_ingredients")
-              .delete()
-              .eq("product_id", productId);
-          if (deleteError) throw deleteError;
-      } else {
-          const { data: newProduct, error: prodError } = await supabaseClient
-              .from("products")
-              .insert({ name: name, barcode: barcode, base_price: price })
-              .select()
-              .single();
-          
-          if(prodError) throw prodError;
-          productId = newProduct.id;
-      }
-
-      if(pendingRecipeIngredients.length > 0) {
-          const recipeItems = pendingRecipeIngredients.map(ing => ({
-              product_id: productId,
-              ingredient_id: ing.ingredient_id,
-              quantity_grams: ing.quantity_grams
-          }));
-
-          const { error: recipeError } = await supabaseClient.from("product_ingredients").insert(recipeItems);
-          if (recipeError) throw recipeError;
-      }
-      
-      alert(EDITING_PRODUCT_ID ? "تم تعديل المنتج ووصفته بنجاح!" : "تم حفظ المنتج ووصفته بنجاح!");
-      document.getElementById("productModalOverlay").classList.remove("open");
-      
-      document.getElementById("newProdName").value = "";
-      document.getElementById("newProdBarcode").value = ""; 
-      document.getElementById("newProdPrice").value = "";
-      pendingRecipeIngredients = [];
-      EDITING_PRODUCT_ID = null;
-      renderPendingRecipe();
-      
-      loadProductsTable();
-  } catch(err) {
-      alert("حدث خطأ أثناء الحفظ: " + err.message);
-  } finally {
-      btn.textContent = originalBtnText; btn.disabled = false;
-  }
-});
-
-
-async function loadIngredientsCatalog() { 
-  const { data } = await supabaseClient.from("ingredients").select("*").order('id'); 
-  
-  document.getElementById("receiptIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
-  document.getElementById("recipeIngredientSelect").innerHTML = data.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join(""); 
-  
-  document.getElementById("ingredientsTableBody").innerHTML = data.map(i => `
-    <tr class="border-b hover:bg-gray-50 transition">
-      <td class="p-3 font-bold text-gray-800">${escapeHtml(i.name)}</td>
-      <td class="p-3 font-bold text-blue-600">${escapeHtml(i.unit)}</td>
-      <td class="p-3">
-        <button class="edit-ing-btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs font-bold transition shadow-sm"
-                data-id="${i.id}" data-name="${escapeHtml(i.name)}" data-unit="${escapeHtml(i.unit)}">
-          تعديل المعيار ✏️
-        </button>
-      </td>
-    </tr>
-  `).join("");
-}
-
-document.getElementById("ingredientsTableBody").addEventListener("click", (e) => {
-    const btn = e.target.closest(".edit-ing-btn");
-    if (btn) {
-        editIngredient(btn.dataset.id, btn.dataset.name, btn.dataset.unit);
+// اللاب توب بيكتب هنا مباشرة وبيحدث نفس المتغير بدون تضارب
+passwordInput.addEventListener("keydown", (e) => {
+    if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        passString += e.key;
+        passwordInput.value = passString;
+    } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        passString = passString.slice(0, -1);
+        passwordInput.value = passString;
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById("submitBtn").click();
+    } else if (e.key !== 'Tab') {
+        e.preventDefault(); // منع أي حروف تانية
     }
 });
+// ==============================
 
-async function editIngredient(id, currentName, currentUnit) {
-  let unit = prompt(`تعديل معيار الخامة (${currentName}):\n(اكتب: gram أو liter أو ml أو kg أو قطعة)`, currentUnit);
-  if (!unit) return;
-
-  let dbUnit = unit.trim();
-  if (dbUnit === "جرام") dbUnit = "gram";
-  if (dbUnit === "لتر") dbUnit = "liter";
-  if (dbUnit === "ملي") dbUnit = "ml";
-  if (dbUnit === "كيلو") dbUnit = "kg";
-  if (dbUnit === "قطعة" || dbUnit === "قطعه") dbUnit = "piece";
-
-  const validUnits = ['gram', 'kg', 'liter', 'ml', 'piece'];
-  if (!validUnits.includes(dbUnit)) {
-      alert("معيار غير صحيح! الرجاء إدخال وحدة صحيحة (gram, kg, liter, ml, piece).");
-      return;
-  }
-
-  try {
-      const { data, error } = await supabaseClient
-          .from('ingredients')
-          .update({ unit: dbUnit })
-          .eq('id', id);
-
-      if (error) throw error;
-      
-      alert("تم تعديل المعيار بنجاح!");
-      loadIngredientsCatalog(); 
-  } catch (err) {
-      alert("حدث خطأ أثناء التعديل: " + err.message);
-  }
-}
-
-async function loadIngredientStock() { 
-  const { data } = await supabaseClient.from("branch_ingredient_stock").select("quantity_on_hand, ingredients(name, unit)").eq("branch_id", CURRENT_BRANCH_ID); 
-  document.getElementById("ingredientStockBody").innerHTML = data.map(d=>`<tr><td class="p-2">${escapeHtml(d.ingredients.name)}</td><td class="p-2">${d.quantity_on_hand}${d.ingredients.unit}</td></tr>`).join(""); 
-}
-
-async function loadProductStock() { 
-  const { data } = await supabaseClient.from("branch_product_stock").select("product_id, quantity_on_hand, products(name)").eq("branch_id", CURRENT_BRANCH_ID); 
-  document.getElementById("productStockBody").innerHTML = data.map(d=>`<tr><td class="p-2">${escapeHtml(d.products.name)}</td><td class="p-2">${d.quantity_on_hand} قطعة</td></tr>`).join(""); 
+// تسجيل الدخول الذكي
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("loginEmail").value;
+  // بناخد الباسورد من المتغير اللي إحنا متحكمين فيه 100% مش من المربع
+  const rawPassword = passString; 
   
-  const { data: productsData } = await supabaseClient.from("products").select("id, name");
-  document.getElementById("prodProductSelect").innerHTML = productsData.map(d=>`<option value="${d.id}">${escapeHtml(d.name)}</option>`).join(""); 
-}
+  if(!email) { alert("من فضلك اختر اسم المستخدم من القائمة!"); return; }
+  if(!rawPassword) { alert("من فضلك اكتب كلمة المرور!"); return; }
 
-async function loadProductsTable() { 
-  const { data } = await supabaseClient.from("products").select("*").order('is_active', { ascending: false }); 
-  GLOBAL_PRODUCTS = data || []; // حفظ المنتجات عشان مودال الشركات
+  const errorMsg = document.getElementById("loginErrorMsg");
+  errorMsg.classList.add("hidden");
   
-  document.getElementById("productsTableBody").innerHTML = data.map(p => `
-    <tr class="border-b transition ${p.is_active ? 'hover:bg-gray-50' : 'opacity-50 bg-gray-100'}">
-      <td class="p-3">${escapeHtml(p.name)}</td>
-      <td class="p-3 font-bold">${p.base_price} ج</td>
-      <td class="p-3">
-        <div class="flex gap-2 justify-end">
-          <button class="edit-prod-btn bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-xs font-bold transition" data-id="${p.id}">
-            تعديل ✏️
-          </button>
-          <button onclick="toggleProductStatus(event, '${p.id}',${p.is_active})" class="text-xs px-3 py-1 rounded font-bold transition ${p.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">
-            ${p.is_active ? 'إيقاف ❌' : 'تفعيل ✅'}
-          </button>
-        </div>
-      </td>
-    </tr>
-  `).join(""); 
-}
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true; btn.textContent = "جاري الدخول...";
 
-document.getElementById("productsTableBody").addEventListener("click", async (e) => {
-    const btn = e.target.closest(".edit-prod-btn");
-    if (!btn) return;
-
-    const id = btn.dataset.id;
-    const originalText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = "جاري التحميل...";
-
-    const { data: product, error } = await supabaseClient.from("products").select("*").eq("id", id).single();
-
-    btn.disabled = false;
-    btn.textContent = originalText;
-
-    if (error || !product) {
-        alert("حدث خطأ أثناء تحميل بيانات المنتج!");
-        return;
-    }
-
-    openProductModal(product);
-});
-
-async function toggleProductStatus(event, id, currentStatus) {
-  const confirmMsg = currentStatus ? "هل أنت متأكد أنك تريد إخفاء هذا المنتج من شاشة الكاشير؟" : "هل تريد إعادة تفعيل هذا المنتج؟";
-  if(!confirm(confirmMsg)) return;
-  
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = "جاري... ⏳";
-
-  const { error } = await supabaseClient.from("products").update({ is_active: !currentStatus }).eq("id", id);
+  let { data, error } = await supabaseClient.auth.signInWithPassword({ 
+    email, 
+    password: rawPassword + "-bakery" 
+  });
   
   if (error) {
-    alert("حدث خطأ أثناء التحديث!");
-    btn.disabled = false;
-  } else {
-    loadProductsTable(); 
+    const fallback = await supabaseClient.auth.signInWithPassword({ 
+      email, 
+      password: rawPassword 
+    });
+    data = fallback.data;
+    error = fallback.error;
   }
-}
-
-async function loadShifts() { 
-  const { data } = await supabaseClient.from("cashier_shifts").select("*, staff(full_name)"); 
-  document.getElementById("shiftsTableBody").innerHTML = data.map(s=>`<tr><td class="p-3">${escapeHtml(s.staff.full_name)}</td><td class="p-3" dir="ltr">${new Date(s.opened_at).toLocaleTimeString('ar-EG')}</td><td class="p-3">${s.closed_at ? 'مغلق' : 'مفتوح'}</td><td class="p-3 font-bold">${s.expected_cash} ج</td><td class="p-3 font-bold text-green-600">${s.actual_cash || '-'}</td></tr>`).join(""); 
-}
-
-async function loadPayrollSummary() { 
-  const { data } = await supabaseClient.from("staff").select("*"); 
-  document.getElementById("payrollTableBody").innerHTML = data.map(s=>`<tr><td class="p-3 font-bold">${escapeHtml(s.full_name)}</td><td class="p-3">${s.role === 'admin' ? 'مدير' : 'كاشير'}</td><td class="p-3 text-green-600 font-bold">${s.basic_salary || 0} ج</td></tr>`).join(""); 
-}
-
-async function loadOrders() {
-    const { data: orders, error } = await supabaseClient.from('orders').select('*, clients(name)').order('created_at', { ascending: false }).limit(50);
-    const tbody = document.getElementById("ordersTableBody");
-    if(error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500">حدث خطأ في التحميل</td></tr>`; return; }
-    if(orders.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4">لا توجد فواتير مسجلة حتى الآن</td></tr>`; return; }
-
-    tbody.innerHTML = orders.map(order => `
-        <tr class="border-b hover:bg-gray-50 transition">
-            <td class="p-3 font-bold">${escapeHtml(order.receipt_number)}</td>
-            <td class="p-3 text-sm text-gray-600" dir="ltr">${new Date(order.created_at).toLocaleString('ar-EG')}</td>
-            <td class="p-3"><span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-sm font-bold">${order.clients ? escapeHtml(order.clients.name) + ' 🏢' : escapeHtml(order.customer_name || 'عميل نقدي')}</span></td>
-            <td class="p-3 font-bold text-green-600">${Number(order.total_amount).toFixed(2)} ج</td>
-            <td class="p-3">
-                <button class="reprint-btn bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition text-xs font-bold" 
-                    data-id="${escapeHtml(order.id)}" data-receipt="${escapeHtml(order.receipt_number)}" data-customer="${order.clients ? escapeHtml(order.clients.name) : escapeHtml(order.customer_name \vert{}\vert{} 'عميل نقدي')}" data-total="${order.total_amount}">
-                    طباعة 🖨️
-                </button>
-            </td>
-        </tr>
-    `).join("");
-}
-
-async function reprintOrder(orderId, receiptNum, customerName, totalAmount) {
-    const { data: items } = await supabaseClient.from('order_items').select('quantity, unit_price, products(name)').eq('order_id', orderId);
+  
+  if (error) {
+    errorMsg.textContent = "كلمة المرور غير صحيحة!";
+    errorMsg.classList.remove("hidden");
+    btn.disabled = false; btn.textContent = "دخول";
     
-    const { data: settings } = await supabaseClient.from('branch_settings').select('*').eq('branch_id', CURRENT_BRANCH_ID).maybeSingle();
-    
-    const nameEn = escapeHtml(settings?.bakery_name || 'مخبز العائلة');
-    const logoUrl = escapeHtml(settings?.logo_url || '');
-    const welcomeMsg = escapeHtml(settings?.welcome_message || 'شكراً لزيارتكم');
-
-    let html = ``;
-    if (logoUrl) html += `<img src="${logoUrl}" id="receiptLogo" class="r-logo">`;
-    html += `<div class="r-title">${nameEn}</div><div class="text-center text-xs mb-2">(نسخة مطبوعة)</div><div class="r-divider"></div><div class="r-row"><span>رقم:</span><span>${receiptNum}</span></div>`;
-    if(customerName && customerName !== 'null' && customerName !== 'عميل نقدي') html += `<div class="r-row"><span>العميل:</span><span>${customerName}</span></div>`;
-    
-    html += `<div class="r-divider"></div><table><tr><th>الصنف</th><th>سعر</th><th>ك</th><th>ج</th></tr>`;
-    items.forEach(i => {
-        html += `<tr><td>${escapeHtml(i.products.name)}</td><td>${Number(i.unit_price).toFixed(2)}</td><td>${i.quantity}</td><td>${(i.unit_price * i.quantity).toFixed(2)}</td></tr>`;
-    });
-    html += `</table><div class="r-divider"></div><div class="r-row font-bold"><span>الإجمالي:</span><span>${Number(totalAmount).toFixed(2)}</span></div><div class="r-divider"></div><div class="text-center font-bold" style="margin-top:5px;">${welcomeMsg}</div>`;
-    
-    document.getElementById("printArea").innerHTML = html;
-
-    if (logoUrl) {
-        let imgElement = document.getElementById("receiptLogo");
-        imgElement.onload = function() { window.print(); };
-        imgElement.onerror = function() { window.print(); }; 
-    } else {
-        window.print();
-    }
-}
-
-async function openReceiptSettings() {
-    document.getElementById('receiptSettingsModal').classList.add("open");
-    
-    const { data, error } = await supabaseClient.from("branch_settings").select("*").eq("branch_id", CURRENT_BRANCH_ID).maybeSingle();
-    
-    if (data) {
-        document.getElementById('bakeryNameEn').value = data.bakery_name || '';
-        document.getElementById('bakeryLogoUrl').value = data.logo_url || '';
-        document.getElementById('welcomeMessage').value = data.welcome_message || '';
-    }
-}
-
-function closeReceiptSettings() {
-    document.getElementById('receiptSettingsModal').classList.remove("open");
-}
-
-async function saveReceiptSettings() {
-    const name = document.getElementById('bakeryNameEn').value;
-    const logo = document.getElementById('bakeryLogoUrl').value;
-    const msg = document.getElementById('welcomeMessage').value;
-
-    const { error } = await supabaseClient.from("branch_settings").upsert({
-        branch_id: CURRENT_BRANCH_ID,
-        bakery_name: name,
-        logo_url: logo,
-        welcome_message: msg
-    });
-
-    if (error) {
-        alert("حدث خطأ أثناء الحفظ: " + error.message);
-    } else {
-        alert("تم حفظ الإعدادات بنجاح، وستسمع في شاشات الكاشير فوراً!");
-        closeReceiptSettings();
-    }
-}
-
-document.querySelectorAll(".nav-item").forEach(item => { 
-  item.addEventListener("click", () => { 
-    document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active")); 
-    item.classList.add("active"); 
-    document.querySelectorAll(".content-section").forEach(sec => sec.classList.remove("active")); 
-    document.getElementById(`tab-${item.dataset.tab}`).classList.add("active"); 
-  }); 
+    // تصفير الباسورد عشان يكتب من جديد
+    passString = "";
+    passwordInput.value = "";
+    return;
+  }
+  
+  const { data: staff } = await supabaseClient.from("staff").select("role").eq("id", data.user.id).single();
+  if (staff && staff.role === "cashier") {
+    window.location.href = "pos_1.html";
+  } else {
+    window.location.href = "admin_4.html";
+  }
 });
-
-function openReceiptModal() { document.getElementById("receiptModalOverlay").classList.add("open"); }
-
-document.getElementById("logoutBtn").addEventListener("click", async () => { 
-  await supabaseClient.auth.signOut(); 
-  window.open('', '_self', ''); 
-  window.close();
-  setTimeout(() => { window.location.href = "index.html"; }, 500);
-});
-
-document.getElementById("ordersTableBody").addEventListener("click", (e) => {
-    const btn = e.target.closest(".reprint-btn");
-    if (btn) {
-        reprintOrder(btn.dataset.id, btn.dataset.receipt, btn.dataset.customer, btn.dataset.total);
-    }
-});
-
-initApp();
 </script>
 </body>
 </html>
