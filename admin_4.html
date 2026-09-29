@@ -65,7 +65,6 @@
       <div class="nav-item active" data-tab="overview"><span>📊</span><span>نظرة عامة</span></div>
       <div class="nav-item" data-tab="inventory"><span>📦</span><span>المخزن والإنتاج</span></div>
       <div class="nav-item" data-tab="products"><span>🥐</span><span>المنتجات والخامات</span></div>
-      <!-- التبويبة الجديدة -->
       <div class="nav-item" data-tab="clients"><span>🤝</span><span>عملاء الشركات (B2B)</span></div>
       <div class="nav-item" data-tab="shifts"><span>👥</span><span>الورديات والمبيعات</span></div>
       <div class="nav-item" data-tab="hr"><span>🏢</span><span>الموارد البشرية والإعدادات</span></div>
@@ -79,12 +78,68 @@
   <main class="flex-1 overflow-y-auto">
     <div class="max-w-6xl mx-auto px-8 py-8">
       
+      <!-- بداية الداش بورد الاحترافية -->
       <section id="tab-overview" class="content-section active">
-        <h2 class="font-display font-extrabold text-2xl mb-6">📊 نظرة عامة</h2>
-        <div class="grid grid-cols-4 gap-5">
-          <div class="stat-card p-5"><p class="text-xs text-gray-500">المبيعات اليومية</p><p class="font-bold text-2xl text-yellow-600">قريباً..</p></div>
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="font-display font-extrabold text-2xl">📊 نظرة عامة وتحليل المبيعات</h2>
+            <div class="flex gap-2 items-center bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
+                <span class="text-xs font-bold text-gray-500">من:</span>
+                <input type="date" id="dashStartDate" class="form-input text-sm py-1 px-2">
+                <span class="text-xs font-bold text-gray-500">إلى:</span>
+                <input type="date" id="dashEndDate" class="form-input text-sm py-1 px-2">
+                <button onclick="loadDashboardStats()" class="bg-yellow-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm hover:bg-yellow-700 transition">تحديث الأرقام 🔄</button>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-4 gap-5 mb-8">
+          <div class="stat-card p-5 border-t-4 border-t-blue-500 shadow-sm">
+              <p class="text-xs text-gray-500 font-bold mb-1">إجمالي المبيعات</p>
+              <p id="dashTotalSales" class="font-black text-3xl text-gray-800 tabular">0.00 ج</p>
+          </div>
+          <div class="stat-card p-5 border-t-4 border-t-green-500 shadow-sm">
+              <p class="text-xs text-gray-500 font-bold mb-1">عدد الطلبات (فواتير)</p>
+              <p id="dashOrderCount" class="font-black text-3xl text-gray-800 tabular">0</p>
+          </div>
+          <div class="stat-card p-5 border-t-4 border-t-purple-500 shadow-sm">
+              <p class="text-xs text-gray-500 font-bold mb-1">مبيعات الشركات (B2B)</p>
+              <p id="dashB2BSales" class="font-black text-3xl text-gray-800 tabular">0.00 ج</p>
+          </div>
+          <div class="stat-card p-5 border-t-4 border-t-yellow-500 shadow-sm">
+              <p class="text-xs text-gray-500 font-bold mb-1">متوسط قيمة الفاتورة</p>
+              <p id="dashAvgOrder" class="font-black text-3xl text-gray-800 tabular">0.00 ج</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="stat-card overflow-hidden shadow-sm">
+                <h3 class="p-4 font-bold border-b bg-gray-50 flex justify-between items-center">
+                    <span>🔥 الأصناف الأكثر مبيعاً</span>
+                    <span class="text-xs text-gray-400 font-normal">خلال الفترة المحددة</span>
+                </h3>
+                <div class="overflow-y-auto max-h-80">
+                    <table class="w-full text-sm text-right">
+                        <thead>
+                            <tr class="bg-gray-100 border-b">
+                                <th class="p-3">اسم الصنف</th>
+                                <th class="p-3">الكمية المباعة</th>
+                                <th class="p-3">الإيراد</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashTopProductsBody">
+                            <tr><td colspan="3" class="text-center p-6 text-gray-500">جاري تحميل البيانات...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="stat-card p-6 flex flex-col justify-center items-center bg-gradient-to-br from-cream to-white border border-yellow-200">
+                <div class="w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-4 bg-yellow-100 border-4 border-yellow-500">🚀</div>
+                <h3 class="font-bold text-xl text-gray-800 mb-2">أداء الفرع ممتاز</h3>
+                <p class="text-sm text-gray-500 text-center">النظام يعمل بكفاءة. يتم مزامنة المبيعات اللحظية، تحديث المخازن، وإدارة تقارير الورديات تلقائياً عبر السيرفرات السحابية.</p>
+            </div>
         </div>
       </section>
+      <!-- نهاية الداش بورد الاحترافية -->
 
       <section id="tab-inventory" class="content-section">
         <div class="mb-6 flex justify-between">
@@ -136,7 +191,6 @@
         </div>
       </section>
 
-      <!-- القسم الجديد للشركات -->
       <section id="tab-clients" class="content-section">
         <div class="mb-6 flex justify-between items-center">
           <h2 class="font-display font-extrabold text-2xl">🤝 عملاء الجملة والشركات</h2>
@@ -344,6 +398,104 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// دالة تهيئة تواريخ الداش بورد
+function initDashboardDates() {
+    const today = new Date();
+    // نظبط التوقيت عشان التواريخ تطلع صح
+    const formatDate = (d) => {
+        const tzOffset = d.getTimezoneOffset() * 60000;
+        return (new Date(d - tzOffset)).toISOString().split('T')[0];
+    };
+    
+    // افتراضيا يجيب مبيعات اليوم
+    document.getElementById('dashStartDate').value = formatDate(today);
+    document.getElementById('dashEndDate').value = formatDate(today);
+}
+
+// دالة تحميل أرقام الداش بورد من السيرفر
+async function loadDashboardStats() {
+    const startDate = document.getElementById('dashStartDate').value;
+    const endDate = document.getElementById('dashEndDate').value;
+    
+    if(!startDate || !endDate) return alert("الرجاء تحديد تاريخ البداية والنهاية أولاً!");
+
+    const startIso = new Date(startDate + "T00:00:00").toISOString();
+    const endIso = new Date(endDate + "T23:59:59").toISOString();
+
+    try {
+        // 1. جلب الفواتير (Orders)
+        const { data: orders, error: ordersErr } = await supabaseClient
+            .from("orders")
+            .select("id, total_amount, client_id")
+            .gte("created_at", startIso)
+            .lte("created_at", endIso)
+            .eq("branch_id", CURRENT_BRANCH_ID);
+
+        if (ordersErr) throw ordersErr;
+
+        let totalSales = 0;
+        let b2bSales = 0;
+        const orderCount = orders.length;
+        const orderIds = [];
+
+        orders.forEach(o => {
+            const amt = Number(o.total_amount);
+            totalSales += amt;
+            if (o.client_id) b2bSales += amt;
+            orderIds.push(o.id);
+        });
+
+        const avgOrder = orderCount > 0 ? (totalSales / orderCount) : 0;
+
+        // تحديث الكروت
+        document.getElementById("dashTotalSales").textContent = totalSales.toFixed(2) + " ج";
+        document.getElementById("dashOrderCount").textContent = orderCount;
+        document.getElementById("dashB2BSales").textContent = b2bSales.toFixed(2) + " ج";
+        document.getElementById("dashAvgOrder").textContent = avgOrder.toFixed(2) + " ج";
+
+        // 2. جلب الأصناف الأكثر مبيعاً
+        const tbody = document.getElementById("dashTopProductsBody");
+        
+        if (orderIds.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center p-6 text-gray-500">لا توجد مبيعات في هذه الفترة 📭</td></tr>';
+            return;
+        }
+
+        const { data: items, error: itemsErr } = await supabaseClient
+            .from("order_items")
+            .select("quantity, unit_price, products(name)")
+            .in("order_id", orderIds);
+
+        if (itemsErr) throw itemsErr;
+
+        // تجميع المنتجات
+        const productStats = {};
+        items.forEach(item => {
+            const pName = item.products?.name || "منتج محذوف";
+            if (!productStats[pName]) {
+                productStats[pName] = { qty: 0, revenue: 0 };
+            }
+            productStats[pName].qty += Number(item.quantity);
+            productStats[pName].revenue += (Number(item.quantity) * Number(item.unit_price));
+        });
+
+        // ترتيب المنتجات من الأعلى إيراداً للأقل
+        const sortedProducts = Object.entries(productStats).sort((a, b) => b[1].revenue - a[1].revenue);
+
+        tbody.innerHTML = sortedProducts.map(([name, stats]) => `
+            <tr class="border-b hover:bg-gray-50 transition">
+                <td class="p-3 font-bold text-gray-800">${escapeHtml(name)}</td>
+                <td class="p-3 text-center"><span class="bg-gray-200 px-2 py-1 rounded text-xs font-bold">${stats.qty}</span></td>
+                <td class="p-3 text-green-600 font-bold">${stats.revenue.toFixed(2)} ج</td>
+            </tr>
+        `).join("");
+
+    } catch (err) {
+        console.error("Dashboard error:", err);
+        alert("حدث خطأ أثناء تحميل إحصائيات الداش بورد!");
+    }
+}
+
 async function initApp() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { window.location.href = "index.html"; return; }
@@ -355,6 +507,10 @@ async function initApp() {
   
   loadIngredientsCatalog(); loadIngredientStock(); loadProductStock(); loadProductsTable(); loadShifts(); loadPayrollSummary();
   loadOrders(); loadClientsList();
+
+  // تشغيل الداش بورد أوتوماتيك مع فتح الصفحة
+  initDashboardDates();
+  loadDashboardStats();
 }
 
 // ================= نظام الشركات B2B =================
@@ -819,7 +975,7 @@ async function editIngredient(id, currentName, currentUnit) {
 
 async function loadIngredientStock() { 
   const { data } = await supabaseClient.from("branch_ingredient_stock").select("quantity_on_hand, ingredients(name, unit)").eq("branch_id", CURRENT_BRANCH_ID); 
-  document.getElementById("ingredientStockBody").innerHTML = data.map(d=>`<tr><td class="p-2">${escapeHtml(d.ingredients.name)}</td><td class="p-2">${d.quantity_on_hand} ${d.ingredients.unit}</td></tr>`).join(""); 
+  document.getElementById("ingredientStockBody").innerHTML = data.map(d=>`<tr><td class="p-2">${escapeHtml(d.ingredients.name)}</td><td class="p-2">${d.quantity_on_hand}${d.ingredients.unit}</td></tr>`).join(""); 
 }
 
 async function loadProductStock() { 
@@ -843,7 +999,7 @@ async function loadProductsTable() {
           <button class="edit-prod-btn bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-xs font-bold transition" data-id="${p.id}">
             تعديل ✏️
           </button>
-          <button onclick="toggleProductStatus(event, '${p.id}', ${p.is_active})" class="text-xs px-3 py-1 rounded font-bold transition ${p.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">
+          <button onclick="toggleProductStatus(event, '${p.id}',${p.is_active})" class="text-xs px-3 py-1 rounded font-bold transition ${p.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}">
             ${p.is_active ? 'إيقاف ❌' : 'تفعيل ✅'}
           </button>
         </div>
@@ -916,7 +1072,7 @@ async function loadOrders() {
             <td class="p-3 font-bold text-green-600">${Number(order.total_amount).toFixed(2)} ج</td>
             <td class="p-3">
                 <button class="reprint-btn bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition text-xs font-bold" 
-                    data-id="${escapeHtml(order.id)}" data-receipt="${escapeHtml(order.receipt_number)}" data-customer="${order.clients ? escapeHtml(order.clients.name) : escapeHtml(order.customer_name || 'عميل نقدي')}" data-total="${order.total_amount}">
+                    data-id="${escapeHtml(order.id)}" data-receipt="${escapeHtml(order.receipt_number)}" data-customer="${order.clients ? escapeHtml(order.clients.name) : escapeHtml(order.customer_name \vert{}\vert{} 'عميل نقدي')}" data-total="${order.total_amount}">
                     طباعة 🖨️
                 </button>
             </td>
